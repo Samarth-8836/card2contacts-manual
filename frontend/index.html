@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DigiCard</title>
+    
+    <!-- App Capabilities -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Icons & Styles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- LAYER 1: Camera Feed -->
+    <video id="camera-feed" autoplay playsinline muted></video>
+    <!-- Hidden Canvas for Image Capture -->
+    <canvas id="capture-canvas" style="display:none;"></canvas>
+
+    <!-- LAYER 1.5: Visual Effects -->
+    <div id="flash-overlay" class="hidden"></div>
+    <!-- Note: Flying photos are injected dynamically via JS -->
+
+    <!-- LAYER 2: HUD (Heads Up Display) -->
+    <div id="app-hud">
+        
+        <!-- Top Bar -->
+        <div class="hud-top">
+            <div class="spacer"></div>
+
+            <!-- Profile / Auth Trigger -->
+            <button id="profile-btn" class="icon-btn">
+                <i class="fa-solid fa-user"></i>
+            </button>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="hud-bottom">
+            
+            <!-- Mode Switcher -->
+            <div class="mode-switcher">
+                <div id="mode-slider" class="slider"></div>
+                <div class="mode-text active" data-mode="single">Single</div>
+                <div class="mode-text" data-mode="dual">Dual</div>
+            </div>
+
+            <!-- Shutter Row -->
+            <div class="shutter-area">
+                
+                <!-- Left: Bulk Toggle / Submit Button -->
+                <div id="bulk-toggle" class="control-side">
+                    <!-- State A: Toggle Bulk Mode -->
+                    <div id="bulk-icon-area">
+                        <span class="label">Bulk</span>
+                        <div class="dot"></div>
+                    </div>
+                    <!-- State B: Submit Queue -->
+                    <div id="submit-icon-area" class="hidden">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size:24px; color:#4CAF50; margin-bottom:4px;"></i>
+                        <span class="label" style="color:#4CAF50;">Submit</span>
+                    </div>
+                </div>
+
+                <!-- Center: Shutter -->
+                <button id="shutter-btn">
+                    <!-- Counter Badge (Hidden by default) -->
+                    <div id="counter-badge" class="hidden">0</div>
+                </button>
+
+                <!-- Right: Reset / Cancel (Hidden by default) -->
+                <div id="btn-reset-scan" class="control-side hidden">
+                    <i class="fa-solid fa-xmark" style="font-size:24px; color:#ff4444; margin-bottom:4px;"></i>
+                    <span class="label" style="color:#ff4444;">Cancel</span>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- LAYER 3: Overlays (Modals) -->
+
+    <!-- A. Auth Overlay -->
+    <div id="view-auth" class="overlay">
+        <div class="overlay-header">
+            <h2 id="auth-title">Login</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable center-content">
+            <div class="auth-box">
+                <button id="btn-google-login" class="google-btn">
+                    <i class="fa-brands fa-google"></i> Continue with Google
+                </button>
+
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+                <input type="email" id="inp-email" placeholder="Email" autocomplete="email">
+                <input type="password" id="inp-pass" placeholder="Password">
+                <button id="btn-auth-action" class="primary-btn">Login</button>
+                <p id="btn-toggle-auth" class="link-text">Create an account</p>
+                <p id="auth-error" class="error-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- B. Dashboard Overlay -->
+    <div id="view-dashboard" class="overlay">
+        <div class="overlay-header">
+            <h2>Dashboard</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable">
+            <!-- User Identity Section -->
+            <div class="user-identity-section">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="user-details">
+                    <span class="label">Logged in as</span>
+                    <h3 id="dash-user-email">Guest</h3>
+                </div>
+            </div>
+            
+            <!-- Google Link Status -->
+            <div id="google-status-area" style="padding: 20px; text-align: center; border-bottom: 1px solid #333;">
+                <p style="color:#888; margin-bottom: 10px; font-size: 14px;">Google Integration</p>
+                <button id="btn-link-google" class="secondary-btn" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <i class="fa-brands fa-google"></i> <span id="google-btn-text">Link Google Account</span>
+                </button>
+            </div>
+
+            <div class="menu-list">
+                <button class="menu-item" id="btn-open-email">
+                    <i class="fa-solid fa-envelope"></i> Email Settings
+                </button>
+                <button class="menu-item" id="btn-export-excel">
+                    <i class="fa-solid fa-file-excel"></i> Export All Contacts (XLSX)
+                </button>
+                <button class="menu-item destructive" id="btn-logout">
+                    <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- C. Result / Edit Contact Overlay -->
+    <div id="view-result" class="overlay">
+        <div class="overlay-header">
+            <h2>New Contact</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="overlay-body scrollable">
+            <div class="form-group">
+                <label>Name</label>
+                <textarea id="res-name" rows="1"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Company</label>
+                <input type="text" id="res-company">
+            </div>
+            <div class="form-group">
+                <label>Business Category</label>
+                <input type="text" id="res-category" placeholder="e.g. Plumbing, Legal">
+            </div>
+            <div class="form-group">
+                <label>Job Title</label>
+                <input type="text" id="res-role">
+            </div>
+            <div class="form-group">
+                <label>Emails</label>
+                <textarea id="res-email" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Phone Numbers</label>
+                <textarea id="res-phone" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Websites</label>
+                <textarea id="res-url" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Addresses</label>
+                <textarea id="res-address" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>AI Notes</label>
+                <textarea id="res-notes" rows="4"></textarea>
+            </div>
+        </div>
+
+        <div class="overlay-footer">
+            <button id="btn-save-vcf" class="primary-btn save-btn">
+                <i class="fa-solid fa-download"></i> Save Contact
+            </button>
+        </div>
+    </div>
+
+
+    <!-- D. Email Settings Overlay -->
+    <div id="view-email-settings" class="overlay">
+        <div class="overlay-header">
+            <button class="icon-btn-text" id="btn-back-settings">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+            
+            <div class="toggle-container">
+                <span style="font-size:12px; font-weight:600; margin-right:8px;">AUTO EMAIL</span>
+                <label class="switch">
+                    <input type="checkbox" id="email-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="overlay-body scrollable">
+            <div class="settings-intro">
+                <p>Automatically send an intro email to new contacts.</p>
+            </div>
+            
+            <div id="templates-list" class="templates-list">
+                <!-- Templates injected here via JS -->
+            </div>
+            
+            <div style="height: 80px;"></div>
+        </div>
+
+        <div class="overlay-footer fixed-bottom">
+            <button id="btn-create-template" class="primary-btn">
+                Create New Template (0/5)
+            </button>
+        </div>
+    </div>
+
+    <!-- E. Create Template Overlay -->
+    <div id="view-template-editor" class="overlay">
+        <div class="overlay-header">
+            <h2>New Template</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="tpl-subject" placeholder="e.g. Nice meeting you!">
+            </div>
+            <div class="form-group">
+                <label>Body</label>
+                <p style="font-size:11px; color:#666; margin-bottom:5px;">AI will personalize [Name] and [Company]</p>
+                <textarea id="tpl-body" rows="12" placeholder="Hi [Name], great connecting with you..."></textarea>
+            </div>
+        </div>
+        <div class="overlay-footer">
+            <button id="btn-save-template" class="primary-btn">Save Template</button>
+        </div>
+    </div>
+
+    <!-- LAYER 4: Alerts & Spinners -->
+    
+    <!-- Spinner -->
+    <div id="spinner" class="modal-backdrop hidden">
+        <div class="spinner-box">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <p id="spinner-text">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Generic Modal -->
+    <div id="generic-modal" class="modal-backdrop hidden">
+        <div class="modal-box">
+            <h3 id="modal-title">Alert</h3>
+            <p id="modal-desc">Description</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="secondary-btn">Cancel</button>
+                <button id="modal-confirm" class="primary-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

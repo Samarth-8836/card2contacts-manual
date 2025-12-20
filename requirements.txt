@@ -1,0 +1,18 @@
+fastapi
+uvicorn
+python-multipart
+# Core dependencies
+# paddlepaddle==2.6.1
+# paddleocr==2.7.3
+numpy<2.0.0
+opencv-python-headless
+Pillow
+# AI Provider
+litellm
+google-generativeai
+# Google Integration
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+requests

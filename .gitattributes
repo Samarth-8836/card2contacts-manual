@@ -1,0 +1,3 @@
+*.pem binary
+*.crt binary
+*.key binary

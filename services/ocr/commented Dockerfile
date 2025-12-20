@@ -1,0 +1,76 @@
+# ==============================================================================
+# MODULE: Base Image Selection
+# PURPOSE: Defines the operating system and Python version.
+# DETAILS:
+#   - We use 'python:3.10-slim-bullseye' (Debian 11).
+#   - 'Slim' reduces image size by removing unnecessary tools.
+#   - 'Bullseye' is chosen over 'Alpine' for better binary compatibility with 
+#     machine learning libraries (like PaddlePaddle/OpenCV) which often utilize 
+#     C extensions that can break on Alpine Linux.
+# ==============================================================================
+FROM python:3.10-slim-bullseye
+
+# ==============================================================================
+# MODULE: Working Directory
+# PURPOSE: Sets the working directory inside the container.
+# DETAILS: All subsequent commands (COPY, RUN, CMD) will be executed relative 
+# to this path '/app'.
+# ==============================================================================
+WORKDIR /app
+
+# ==============================================================================
+# MODULE: Environment Configuration
+# PURPOSE: Sets global environment variables to tune runtime behavior.
+# DETAILS:
+#   - Threading Config: Machine Learning libraries (like Paddle/PyTorch) often 
+#     try to spawn multiple threads for matrix operations. In a containerized 
+#     environment, this can cause segmentation faults or CPU contention. 
+#     Setting OMP/MKL threads to 1 forces single-threaded execution for 
+#     stability.
+#   - Application Config: Enables the Angle Classification feature in PaddleOCR.
+# ==============================================================================
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV PADDLEOCR_USE_ANGLE_CLS=true
+
+# ==============================================================================
+# MODULE: System Dependencies
+# PURPOSE: Installs non-Python libraries required by the OS to run ML tools.
+# DETAILS:
+#   - libgl1-mesa-glx: Required by OpenCV (cv2) for image processing operations.
+#   - libglib2.0-0: Core library required by many Python extensions.
+#   - libgomp1: The GNU OpenMP library, required for parallel processing 
+#     support (even if we restricted threads above, the shared library must exist).
+#   - rm -rf ...: Cleans up the apt cache to keep the final image size small.
+# ==============================================================================
+RUN apt-get update && \
+    apt-get install -y libgl1-mesa-glx libglib2.0-0 libgomp1 && \
+    rm -rf /var/lib/apt/lists/*
+
+# ==============================================================================
+# MODULE: Python Dependencies
+# PURPOSE: Installs the Python libraries defined in requirements.txt.
+# DETAILS:
+#   - '--no-cache-dir' is used to prevent pip from caching the downloaded 
+#     packages, which saves space in the Docker image.
+# ==============================================================================
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ==============================================================================
+# MODULE: Application Source Code
+# PURPOSE: Moves the actual application logic into the container.
+# ==============================================================================
+COPY main.py .
+
+# ==============================================================================
+# MODULE: Container Entry Point
+# PURPOSE: Defines the command that runs when the container starts.
+# DETAILS:
+#   - Uses 'uvicorn' as the ASGI web server.
+#   - 'main:app' refers to the file 'main.py' and the FastAPI/app object 'app'.
+#   - Host '0.0.0.0' exposes the server to outside the Docker container.
+#   - NOTE: Model downloads happen at runtime (lazy loading) rather than 
+#     build time to keep the build process fast.
+# ==============================================================================
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # 1. Database
+  db:
+    image: postgres:15
+    container_name: scanner_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: securepassword
+      POSTGRES_DB: scanner_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. OCR Service (PaddleOCR-VL)
+  ocr_service:
+    build: ./services/ocr
+    container_name: scanner_ocr
+    restart: always
+    ports:
+      - "8001:8001"
+    # REMOVED MEMORY LIMITS - Critical for VL models
+    environment:
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+
+volumes:
+  postgres_data:
+  # Removed ollama_data volume
