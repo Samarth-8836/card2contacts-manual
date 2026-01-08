@@ -14,12 +14,12 @@ from email.mime.multipart import MIMEMultipart
 # SMTP Configuration
 # ==============================================================================
 
-# Development credentials (change for production)
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USER = "otaku8836@gmail.com"
-SMTP_PASSWORD = "svcu jvwu lonc wwdm"
-SMTP_FROM = "DigiCard <otaku8836@gmail.com>"
+# Hostinger SMTP credentials
+SMTP_HOST = "smtp.hostinger.com"
+SMTP_PORT = 465
+SMTP_USER = "support@card2contacts.com"
+SMTP_PASSWORD = "MRf5k8ch3XBJz3U@"
+SMTP_FROM = "Card2Contacts <support@card2contacts.com>"
 
 # ==============================================================================
 # Email Sending Functions
@@ -47,9 +47,8 @@ def send_system_email(to_email: str, subject: str, html_body: str) -> bool:
         html_part = MIMEText(html_body, "html")
         msg.attach(html_part)
 
-        # Connect to SMTP server and send
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
+        # Connect to SMTP server and send (using SSL for port 465)
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(SMTP_USER, to_email, msg.as_string())
 
@@ -247,8 +246,8 @@ def send_distributor_contact_request_email(user_email: str, username: str) -> bo
     Returns:
         True if email sent successfully, False otherwise
     """
-    # Email to distributor (will be changed for production)
-    distributor_email = "otaku8836@gmail.com"
+    # Email to distributor
+    distributor_email = "support@card2contacts.com"
     subject = f"License Purchase Request - {username}"
     html_body = f"""
     <!DOCTYPE html>

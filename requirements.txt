@@ -1,43 +1,61 @@
-# ==========================================
-# DIGICARD ENTERPRISE - PRODUCTION DEPENDENCIES
-# ==========================================
+# ==============================================================================
+# DigiCard Enterprise - Production Dependencies
+# ==============================================================================
 
-# Web Framework
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-python-multipart==0.0.12
+# ==============================================================================
+# CORE WEB FRAMEWORK
+# ==============================================================================
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
 
-# Database
+# ==============================================================================
+# DATABASE & ORM
+# ==============================================================================
 sqlmodel==0.0.22
-psycopg2-binary==2.9.9
-alembic==1.13.3
-
-# Authentication & Security
-python-jose[cryptography]==3.3.0
+psycopg2-binary==2.9.10
 passlib[bcrypt]==1.7.4
+
+# ==============================================================================
+# AUTHENTICATION & SECURITY
+# ==============================================================================
+python-jose[cryptography]==3.3.0
 pydantic-settings==2.6.1
 
-# HTTP Client
-httpx==0.27.2
-
-# Image Processing
-numpy<2.0.0
-opencv-python-headless==4.10.0.84
-Pillow==11.0.0
-
-# AI/LLM Provider
-litellm==1.52.10
-google-generativeai==0.8.3
-
-# OCR Provider
-mistralai==1.2.4
-
-# Google Integration
-google-auth==2.36.0
+# ==============================================================================
+# GOOGLE INTEGRATION (OAuth & APIs)
+# ==============================================================================
+google-auth==2.37.0
 google-auth-oauthlib==1.2.1
 google-auth-httplib2==0.2.0
 google-api-python-client==2.154.0
 
-# Utilities
+# ==============================================================================
+# AI/LLM PROVIDERS
+# ==============================================================================
+# LiteLLM - unified LLM interface (Groq, Gemini, etc.)
+litellm==1.55.8
+
+# Google Generative AI (Gemini)
+google-generativeai==0.8.3
+
+# Mistral AI - OCR Provider
+mistralai==1.2.6
+
+# ==============================================================================
+# HTTP CLIENTS
+# ==============================================================================
+httpx==0.28.1
 requests==2.32.3
-python-dotenv==1.0.1
+
+# ==============================================================================
+# IMAGE PROCESSING & OCR
+# ==============================================================================
+Pillow==11.0.0
+opencv-python-headless==4.10.0.84
+numpy<2.0.0
+
+# ==============================================================================
+# UTILITIES
+# ==============================================================================
+python-dateutil==2.9.0.post0
