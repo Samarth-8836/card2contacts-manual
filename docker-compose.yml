@@ -15,17 +15,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # 2. OCR Service (PaddleOCR-VL)
-  ocr_service:
-    build: ./services/ocr
-    container_name: scanner_ocr
-    restart: always
-    ports:
-      - "8001:8001"
-    # REMOVED MEMORY LIMITS - Critical for VL models
-    environment:
-      - OMP_NUM_THREADS=1
-      - MKL_NUM_THREADS=1
+  # OCR Service removed - now using Mistral OCR 3 API (external service)
+  # See backend/config.py and .env for OCR provider configuration
 
 volumes:
   postgres_data:

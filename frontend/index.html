@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DigiCard</title>
-    
+
     <!-- App Capabilities -->
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,6 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <!-- LAYER 1: Camera Feed -->
@@ -27,7 +30,7 @@
 
     <!-- LAYER 2: HUD (Heads Up Display) -->
     <div id="app-hud">
-        
+
         <!-- Top Bar -->
         <div class="hud-top">
             <div class="spacer"></div>
@@ -40,7 +43,7 @@
 
         <!-- Bottom Controls -->
         <div class="hud-bottom">
-            
+
             <!-- Mode Switcher -->
             <div class="mode-switcher">
                 <div id="mode-slider" class="slider"></div>
@@ -50,7 +53,7 @@
 
             <!-- Shutter Row -->
             <div class="shutter-area">
-                
+
                 <!-- Left: Bulk Toggle / Submit Button -->
                 <div id="bulk-toggle" class="control-side">
                     <!-- State A: Toggle Bulk Mode -->
@@ -60,7 +63,8 @@
                     </div>
                     <!-- State B: Submit Queue -->
                     <div id="submit-icon-area" class="hidden">
-                        <i class="fa-solid fa-cloud-arrow-up" style="font-size:24px; color:#4CAF50; margin-bottom:4px;"></i>
+                        <i class="fa-solid fa-cloud-arrow-up"
+                            style="font-size:24px; color:#4CAF50; margin-bottom:4px;"></i>
                         <span class="label" style="color:#4CAF50;">Submit</span>
                     </div>
                 </div>
@@ -76,7 +80,7 @@
                     <i class="fa-solid fa-xmark" style="font-size:24px; color:#ff4444; margin-bottom:4px;"></i>
                     <span class="label" style="color:#ff4444;">Cancel</span>
                 </div>
-                
+
             </div>
         </div>
     </div>
@@ -98,11 +102,71 @@
                 <div class="divider">
                     <span>OR</span>
                 </div>
-                <input type="email" id="inp-email" placeholder="Email" autocomplete="email">
-                <input type="password" id="inp-pass" placeholder="Password">
+                <input type="email" id="inp-identifier" placeholder="Email" autocomplete="email">
+                <input type="password" id="inp-pass" placeholder="Password" autocomplete="current-password">
                 <button id="btn-auth-action" class="primary-btn">Login</button>
                 <p id="btn-toggle-auth" class="link-text">Create an account</p>
+                <p id="btn-forgot-password" class="link-text" style="margin-top: 10px;">Forgot Password?</p>
                 <p id="auth-error" class="error-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- A2. OTP Verification Overlay -->
+    <div id="view-otp" class="overlay">
+        <div class="overlay-header">
+            <h2>Verify Login</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable center-content">
+            <div class="auth-box">
+                <p style="color:#888; margin-bottom:20px; text-align:center;">
+                    Enter the 6-digit code sent to<br>
+                    <span id="otp-email-display" style="color:#4CAF50; font-weight:600;">j***@example.com</span>
+                </p>
+                <input type="text" id="inp-otp" maxlength="6" placeholder="000000" inputmode="numeric"
+                    style="text-align:center; font-size:24px; letter-spacing:8px; font-family:monospace;">
+                <button id="btn-verify-otp" class="primary-btn">Verify</button>
+                <p id="otp-error" class="error-text"></p>
+                <p id="btn-resend-otp" class="link-text" style="margin-top:15px;">Resend Code</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- A3. Password Reset Overlay -->
+    <div id="view-password-reset" class="overlay">
+        <div class="overlay-header">
+            <h2>Reset Password</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable center-content">
+            <div class="auth-box">
+                <p style="color:#888; margin-bottom:20px; text-align:center;">
+                    Enter your registered email address.<br>
+                    <small style="color:#666;">A new password will be sent to your email.</small>
+                </p>
+                <input type="email" id="inp-reset-email" placeholder="Email" autocomplete="email">
+                <button id="btn-reset-password" class="primary-btn">Send New Password</button>
+                <p id="reset-message" class="error-text"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- A6. Change Password Overlay -->
+    <div id="view-change-password" class="overlay">
+        <div class="overlay-header">
+            <h2>Change Password</h2>
+        </div>
+        <div class="overlay-body scrollable center-content">
+            <div class="auth-box">
+                <p style="color:#888; margin-bottom:20px; text-align:center;">
+                    Please set a new password for your account.
+                </p>
+                <input type="password" id="inp-current-password" placeholder="Current Password" autocomplete="current-password">
+                <input type="password" id="inp-new-password" placeholder="New Password (min 6 chars)" autocomplete="new-password">
+                <input type="password" id="inp-confirm-password" placeholder="Confirm New Password" autocomplete="new-password">
+                <button id="btn-change-password" class="primary-btn">Change Password</button>
+                <p id="change-password-error" class="error-text"></p>
             </div>
         </div>
     </div>
@@ -122,18 +186,41 @@
                 <div class="user-details">
                     <span class="label">Logged in as</span>
                     <h3 id="dash-user-email">Guest</h3>
+                    <span id="user-type-badge" class="user-type-badge hidden"></span>
                 </div>
             </div>
-            
-            <!-- Google Link Status -->
+
+            <!-- License Status Section (for single users) -->
+            <div id="license-status-area" class="hidden" style="padding: 20px; text-align: center; border-bottom: 1px solid #333;">
+                <p style="color:#888; margin-bottom: 10px; font-size: 14px;">License Status</p>
+                <div id="license-info-box" style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px;">
+                    <div id="license-status-text" style="margin-bottom: 10px; font-size: 14px;"></div>
+                    <div id="scans-remaining-text" style="margin-bottom: 10px; font-size: 14px;"></div>
+                    <div id="license-expiry-text" style="margin-bottom: 10px; font-size: 12px; color: #888;"></div>
+                    <button id="btn-upgrade-license" class="secondary-btn hidden" style="margin-top: 10px;">
+                        <i class="fa-solid fa-arrow-up"></i> Upgrade to Licensed Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Google Link Status (hidden for sub-accounts) -->
             <div id="google-status-area" style="padding: 20px; text-align: center; border-bottom: 1px solid #333;">
                 <p style="color:#888; margin-bottom: 10px; font-size: 14px;">Google Integration</p>
-                <button id="btn-link-google" class="secondary-btn" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                <button id="btn-link-google" class="secondary-btn"
+                    style="display:flex; align-items:center; justify-content:center; gap:10px;">
                     <i class="fa-brands fa-google"></i> <span id="google-btn-text">Link Google Account</span>
                 </button>
             </div>
 
             <div class="menu-list">
+                <!-- Admin Panel Button (enterprise admins only) -->
+                <button class="menu-item hidden" id="btn-open-admin">
+                    <i class="fa-solid fa-users-gear"></i> Admin Panel
+                </button>
+                <!-- Distributor Dashboard Button (distributors only) -->
+                <button class="menu-item hidden" id="btn-open-distributor">
+                    <i class="fa-solid fa-briefcase"></i> Distributor Dashboard
+                </button>
                 <button class="menu-item" id="btn-open-email">
                     <i class="fa-solid fa-envelope"></i> Email Settings
                 </button>
@@ -153,7 +240,7 @@
             <h2>New Contact</h2>
             <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        
+
         <div class="overlay-body scrollable">
             <div class="form-group">
                 <label>Name</label>
@@ -207,7 +294,7 @@
             <button class="icon-btn-text" id="btn-back-settings">
                 <i class="fa-solid fa-arrow-left"></i> Back
             </button>
-            
+
             <div class="toggle-container">
                 <span style="font-size:12px; font-weight:600; margin-right:8px;">AUTO EMAIL</span>
                 <label class="switch">
@@ -216,22 +303,25 @@
                 </label>
             </div>
         </div>
-        
+
         <div class="overlay-body scrollable">
             <div class="settings-intro">
                 <p>Automatically send an intro email to new contacts.</p>
+                <p style="font-size: 11px; color: #888; margin-top: 8px; padding: 8px; background: #1a1a1a; border-radius: 4px; border-left: 3px solid #4CAF50;">
+                    <i class="fa-solid fa-info-circle"></i> <strong>Note:</strong> Only one template can be active at a time. Auto-email requires an active template.
+                </p>
             </div>
-            
+
             <div id="templates-list" class="templates-list">
                 <!-- Templates injected here via JS -->
             </div>
-            
+
             <div style="height: 80px;"></div>
         </div>
 
         <div class="overlay-footer fixed-bottom">
             <button id="btn-create-template" class="primary-btn">
-                Create New Template (0/5)
+                Create New Template
             </button>
         </div>
     </div>
@@ -245,21 +335,372 @@
         <div class="overlay-body scrollable">
             <div class="form-group">
                 <label>Subject</label>
-                <input type="text" id="tpl-subject" placeholder="e.g. Nice meeting you!">
+                <input type="text" id="tpl-subject" placeholder="e.g. Hey {{ name }}!">
             </div>
             <div class="form-group">
                 <label>Body</label>
-                <p style="font-size:11px; color:#666; margin-bottom:5px;">AI will personalize [Name] and [Company]</p>
-                <textarea id="tpl-body" rows="12" placeholder="Hi [Name], great connecting with you..."></textarea>
+                <p style="font-size:11px; color:#666; margin-bottom:5px;">Use {{ variableName }} for placeholders (e.g., {{ name }}, {{ company }})</p>
+                <textarea id="tpl-body" rows="12" placeholder="Hi {{ name }}, great connecting with you..."></textarea>
             </div>
+
+            <!-- Available Variables Help -->
+            <div style="margin-bottom: 15px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
+                <details style="cursor: pointer;">
+                    <summary style="font-size: 12px; color: #888; margin-bottom: 8px; user-select: none;">
+                        <i class="fa-solid fa-circle-info"></i> Available Variables (click to expand)
+                    </summary>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">
+                        <p style="font-size: 11px; color: #aaa; margin-bottom: 10px;">These variables will be automatically replaced with data from scanned business cards:</p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 11px;">
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ name }}</code> <span style="color: #888;">or</span> <code style="color: #4CAF50;">{{ full_name }}</code>
+                                <div style="color: #666; margin-top: 2px;">Full name from card</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ first_name }}</code>
+                                <div style="color: #666; margin-top: 2px;">First name only</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ last_name }}</code>
+                                <div style="color: #666; margin-top: 2px;">Last name only</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ company }}</code> <span style="color: #888;">or</span> <code style="color: #4CAF50;">{{ organization }}</code>
+                                <div style="color: #666; margin-top: 2px;">Company name</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ email }}</code>
+                                <div style="color: #666; margin-top: 2px;">Email address</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ phone }}</code> <span style="color: #888;">or</span> <code style="color: #4CAF50;">{{ tel }}</code>
+                                <div style="color: #666; margin-top: 2px;">Phone number</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ address }}</code>
+                                <div style="color: #666; margin-top: 2px;">Physical address</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ website }}</code> <span style="color: #888;">or</span> <code style="color: #4CAF50;">{{ url }}</code>
+                                <div style="color: #666; margin-top: 2px;">Website URL</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ title }}</code> <span style="color: #888;">or</span> <code style="color: #4CAF50;">{{ job_title }}</code>
+                                <div style="color: #666; margin-top: 2px;">Job title/position</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ category }}</code>
+                                <div style="color: #666; margin-top: 2px;">Business category</div>
+                            </div>
+                            <div style="background: #0a0a0a; padding: 6px 8px; border-radius: 4px;">
+                                <code style="color: #4CAF50;">{{ notes }}</code>
+                                <div style="color: #666; margin-top: 2px;">AI-generated notes</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding: 10px; background: #0a0a0a; border-radius: 4px; border-left: 3px solid #4CAF50;">
+                            <p style="font-size: 11px; color: #aaa; margin-bottom: 8px; font-weight: bold;">
+                                <i class="fa-solid fa-magic"></i> Smart Conditionals
+                            </p>
+                            <p style="font-size: 10px; color: #888; margin-bottom: 8px;">
+                                Hide entire sections when a field is empty using conditionals:
+                            </p>
+                            <code style="display: block; background: #000; padding: 8px; border-radius: 3px; font-size: 10px; color: #4CAF50; white-space: pre-wrap;">
+{{% if company %}}I'm impressed by {{ company }}'s work!{{% endif %}}</code>
+                            <p style="font-size: 9px; color: #666; margin-top: 6px;">
+                                If <code style="color: #888;">company</code> is empty, the entire line disappears - making your email look natural!
+                            </p>
+                        </div>
+                        <p style="font-size: 10px; color: #666; margin-top: 10px; font-style: italic;">
+                            <i class="fa-solid fa-lightbulb"></i> Tip: Variables are case-insensitive. Use conditionals to create professional emails that adapt to available data.
+                        </p>
+                    </div>
+                </details>
+            </div>
+
+            <!-- File Attachments -->
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Attachments (Optional)</label>
+                <p style="font-size:11px; color:#666; margin-bottom:8px;">Maximum total size: 20 MB. You can attach multiple files.</p>
+                <div style="position: relative;">
+                    <input type="file" id="tpl-attachment" multiple style="display: none;">
+                    <button id="btn-select-file" class="secondary-btn" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <span>Add Files</span>
+                    </button>
+                </div>
+                <!-- Attached Files List -->
+                <div id="attached-files-list" class="hidden" style="margin-top: 10px; padding: 10px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #888;">Attached Files:</span>
+                        <span id="total-size-display" style="font-size: 11px; color: #888;"></span>
+                    </div>
+                    <div id="files-container" style="display: flex; flex-direction: column; gap: 6px;"></div>
+                </div>
+            </div>
+
+            <div style="height: 80px;"></div>
         </div>
         <div class="overlay-footer">
             <button id="btn-save-template" class="primary-btn">Save Template</button>
         </div>
     </div>
 
+    <!-- F. Admin Panel Overlay (Enterprise Admins Only) -->
+    <div id="view-admin-panel" class="overlay">
+        <div class="overlay-header">
+            <button class="icon-btn-text" id="btn-back-admin">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+            <h2 style="flex:1; text-align:center;">Admin Panel</h2>
+            <div style="width:60px;"></div>
+        </div>
+        <div class="overlay-body scrollable">
+            <!-- License Info -->
+            <div id="license-info" style="padding: 15px; background: #1a1a2e; border-radius: 8px; margin-bottom: 20px;">
+                <p style="color:#888; font-size:12px; margin-bottom:5px;">LICENSE STATUS</p>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="license-key-display" style="color:#4CAF50; font-family:monospace;">ENT-XXXX...XXXX</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span id="sub-account-count" style="color:#fff;">0/5 seats</span>
+                        <button id="btn-expand-seats" class="icon-btn" style="padding: 5px 10px; font-size: 11px; background: #4CAF50; color: white; border-radius: 4px;">
+                            <i class="fa-solid fa-plus"></i> Expand
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Button -->
+            <div id="export-buttons" style="margin-bottom: 20px;">
+                <button id="btn-export-all-combined" class="secondary-btn" style="width: 100%; font-size: 13px; padding: 12px;">
+                    <i class="fa-solid fa-file-excel"></i> Export All Combined (Admin + All Sub-Accounts)
+                </button>
+            </div>
+
+            <!-- Sub-accounts List -->
+            <div id="sub-accounts-list" class="sub-accounts-list">
+                <!-- Injected via JS -->
+                <p style="text-align:center; color:#666; padding:20px;">No sub-accounts yet.</p>
+            </div>
+
+            <div style="height: 80px;"></div>
+        </div>
+
+        <div class="overlay-footer fixed-bottom">
+            <button id="btn-create-sub" class="primary-btn">
+                <i class="fa-solid fa-user-plus"></i> Create Sub-Account
+            </button>
+        </div>
+    </div>
+
+    <!-- G. Create/Edit Sub-Account Overlay -->
+    <div id="view-sub-editor" class="overlay">
+        <div class="overlay-header">
+            <h2 id="sub-editor-title">New Sub-Account</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable">
+            <div class="form-group">
+                <label>Email/Username</label>
+                <input type="text" id="sub-username" placeholder="e.g. employee1">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="sub-password" placeholder="Min 6 characters">
+            </div>
+        </div>
+        <div class="overlay-footer">
+            <button id="btn-save-sub" class="primary-btn">Create Sub-Account</button>
+        </div>
+    </div>
+
+    <!-- G2. Expand Seats Modal -->
+    <div id="view-expand-seats" class="overlay">
+        <div class="overlay-header">
+            <h2>Expand Seats</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable">
+            <p style="color:#888; margin-bottom:20px;">Add more seats to your enterprise license. Current usage will be displayed below.</p>
+            <div id="current-usage-info" style="padding: 15px; background: #1a1a2e; border-radius: 8px; margin-bottom: 20px;">
+                <p style="color:#888; font-size:12px; margin-bottom:5px;">CURRENT LICENSE</p>
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span style="color:#bbb;">Max Seats:</span>
+                    <span id="current-max-seats" style="color:#fff; font-weight:bold;">5</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="color:#bbb;">Used Seats:</span>
+                    <span id="current-used-seats" style="color:#fff; font-weight:bold;">0</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Number of Seats to Add</label>
+                <input type="number" id="seats-to-add" placeholder="e.g. 5" min="1" value="5">
+            </div>
+            <div id="new-total-preview" style="padding: 15px; background: #1a1a2e; border-radius: 8px; margin-top: 15px;">
+                <p style="color:#888; font-size:12px; margin-bottom:5px;">NEW TOTAL</p>
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="color:#bbb;">New Max Seats:</span>
+                    <span id="new-max-seats-preview" style="color:#4CAF50; font-weight:bold; font-size:18px;">10</span>
+                </div>
+            </div>
+        </div>
+        <div class="overlay-footer">
+            <button id="btn-confirm-expand-seats" class="primary-btn">
+                <i class="fa-solid fa-check"></i> Confirm Purchase
+            </button>
+        </div>
+    </div>
+
+    <!-- H. Distributor Dashboard Overlay -->
+    <div id="view-distributor" class="overlay">
+        <div class="overlay-header">
+            <button class="icon-btn-text" id="btn-back-distributor">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+            <h2 style="flex:1; text-align:center;">Distributor Dashboard</h2>
+            <div style="width:60px;"></div>
+        </div>
+        <div class="overlay-body scrollable">
+            <!-- Stats Cards -->
+            <div class="distributor-stats">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i class="fa-solid fa-user" style="color:#4CAF50;"></i>
+                        <span>Single Login Accounts</span>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Created</span>
+                            <span id="single-total" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">This Month</span>
+                            <span id="single-this-month" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i class="fa-solid fa-building" style="color:#2196F3;"></i>
+                        <span>Enterprise Accounts</span>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Created</span>
+                            <span id="enterprise-total" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">This Month</span>
+                            <span id="enterprise-this-month" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i class="fa-solid fa-calendar-alt" style="color:#FF9800;"></i>
+                        <span>This Month Total</span>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-item wide">
+                            <span class="stat-label">Accounts Created</span>
+                            <span id="monthly-total-created" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Creation Section -->
+            <div class="account-creation-section">
+                <h3 style="color:#fff; margin-bottom: 15px; font-size: 16px;">Create New Account</h3>
+
+                <!-- Account Type Toggle -->
+                <div class="account-type-toggle" style="margin-bottom: 20px;">
+                    <button class="account-type-btn active" data-type="single">
+                        <i class="fa-solid fa-user"></i> Single Login
+                    </button>
+                    <button class="account-type-btn" data-type="enterprise">
+                        <i class="fa-solid fa-building"></i> Enterprise
+                    </button>
+                </div>
+
+                <!-- Form Fields -->
+                <div id="single-account-form" class="account-form">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="dist-single-email" placeholder="user@example.com">
+                    </div>
+                    <p style="color:#666; font-size:11px; margin-bottom:15px;">
+                        <i class="fa-solid fa-info-circle"></i> Password will be auto-generated and sent to the user's email.
+                    </p>
+                    <button id="btn-create-single" class="secondary-btn" style="width: 100%;">
+                        <i class="fa-solid fa-user-plus"></i> Create Single Login Account
+                    </button>
+                </div>
+
+                <div id="enterprise-account-form" class="account-form hidden">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="dist-ent-email" placeholder="admin@company.com">
+                    </div>
+                    <p style="color:#666; font-size:11px; margin-bottom:15px;">
+                        <i class="fa-solid fa-info-circle"></i> Password will be auto-generated and sent to the admin's email.
+                    </p>
+                    <button id="btn-create-enterprise" class="secondary-btn" style="width: 100%;">
+                        <i class="fa-solid fa-building"></i> Create Enterprise Account
+                    </button>
+                </div>
+            </div>
+
+            <div style="height: 80px;"></div>
+        </div>
+    </div>
+
+    <!-- I. Purchase Licenses Overlay - REMOVED (No longer needed with direct account creation) -->
+
+    <!-- Upgrade Instructions Overlay -->
+    <div id="view-upgrade-instructions" class="overlay">
+        <div class="overlay-header">
+            <h2>Upgrade to Licensed Account</h2>
+            <button class="close-overlay"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="overlay-body scrollable">
+            <div class="info-box" style="margin-bottom: 20px; padding: 15px; background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4CAF50;">
+                <p style="color:#fff; font-size: 14px; margin: 0;">
+                    <i class="fa-solid fa-info-circle"></i> Upgrading to a licensed account will give you unlimited scans and access to all premium features.
+                </p>
+            </div>
+
+            <div style="padding: 20px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <h3 style="margin-top: 0; color: #4CAF50;">How to Upgrade</h3>
+                <ol style="padding-left: 20px; color: #ccc; line-height: 1.8;">
+                    <li>Contact a distributor to request a license upgrade</li>
+                    <li>The distributor will ask if you need a single-user or enterprise license</li>
+                    <li>Your current account will be upgraded with a new licensed account</li>
+                    <li>You will receive new credentials via email to access your upgraded account</li>
+                </ol>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255,193,7,0.1); border-left: 3px solid #FFC107; border-radius: 4px;">
+                    <p style="color:#FFC107; font-size: 13px; margin: 0;">
+                        <i class="fa-solid fa-exclamation-triangle"></i> <strong>Note:</strong> Your account email: <span id="upgrade-email-display" style="color:#fff;"></span>
+                    </p>
+                </div>
+
+                <div style="margin-top: 25px; text-align: center;">
+                    <button id="btn-contact-distributor" class="primary-btn" style="padding: 12px 30px; font-size: 15px;">
+                        <i class="fa-solid fa-phone"></i> Contact Our Distributor Network
+                    </button>
+                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                        Click to request a callback from our team
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- LAYER 4: Alerts & Spinners -->
-    
+
     <!-- Spinner -->
     <div id="spinner" class="modal-backdrop hidden">
         <div class="spinner-box">
@@ -282,4 +723,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>

@@ -394,17 +394,12 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 .template-actions {
-    display: none; /* Hidden by default */
+    display: flex; /* Always visible for better UX */
     flex-direction: row;
     gap: 10px;
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid rgba(255,255,255,0.1);
-}
-
-/* Show actions when class is added via JS click */
-.template-card.expanded .template-actions {
-    display: flex;
 }
 
 .action-btn {
@@ -424,7 +419,16 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* Active State for Template */
 .template-card.active { border-color: var(--accent); background: var(--accent-dim); }
 .template-card h4 { font-size: 16px; margin-bottom: 5px; color: white; font-weight: 600; }
-.template-card p { font-size: 13px; color: var(--text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 20px;}
+.template-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Show 2 lines of preview */
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+    max-height: 2.8em; /* 2 lines * 1.4 line-height */
+}
 .check-icon { position: absolute; top: 15px; right: 15px; color: var(--accent); display: none; }
 .template-card.active .check-icon { display: block; }
 
@@ -448,3 +452,310 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 .spinner-box { text-align: center; color: var(--accent); }
 .spinner-box i { font-size: 40px; margin-bottom: 15px; }
+
+/* =============================================================================
+   7. ENTERPRISE ADMIN PANEL
+   ============================================================================= */
+
+/* User Type Badge */
+.user-type-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+
+.user-type-badge.admin {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.user-type-badge.sub-account {
+    background: #333;
+    color: #888;
+}
+
+/* Sub-accounts List */
+.sub-accounts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sub-account-card {
+    background: var(--surface);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+}
+
+.sub-account-card:active {
+    background: var(--surface-light);
+}
+
+.sub-account-card.inactive {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+.sub-account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sub-account-info .username {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+}
+
+.sub-account-info .status {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.sub-account-info .status.online {
+    color: var(--accent);
+}
+
+.sub-account-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sub-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.sub-action-btn:active {
+    transform: scale(0.9);
+}
+
+.sub-action-btn.toggle {
+    color: var(--accent);
+}
+
+.sub-action-btn.toggle.off {
+    color: var(--danger);
+}
+
+.sub-action-btn.edit {
+    color: #888;
+}
+
+.sub-action-btn.export {
+    width: auto;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    gap: 6px;
+    background: rgba(76, 175, 80, 0.15);
+    color: var(--accent);
+}
+
+.sub-action-btn.export:hover {
+    background: rgba(76, 175, 80, 0.25);
+}
+
+/* Template assignment dropdown for sub-accounts */
+.sub-account-template {
+    flex: 1;
+    margin: 0 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sub-account-template label {
+    font-size: 12px;
+    color: #888;
+}
+
+.template-dropdown {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.template-dropdown:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Update sub-account-card layout to accommodate new elements */
+.sub-account-card {
+    background: var(--surface);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s;
+}
+
+.sub-account-card > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ============================================ */
+/* Distributor Dashboard Styles */
+/* ============================================ */
+
+.distributor-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: var(--surface);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.stat-header i {
+    font-size: 20px;
+}
+
+.stat-header span {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.stat-numbers {
+    display: flex;
+    gap: 10px;
+}
+
+.stat-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.stat-item.wide {
+    flex: 2;
+}
+
+.stat-label {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.account-creation-section {
+    background: var(--surface);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.account-type-toggle {
+    display: flex;
+    gap: 10px;
+}
+
+.account-type-btn {
+    flex: 1;
+    padding: 12px;
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.account-type-btn i {
+    font-size: 16px;
+}
+
+.account-type-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.account-type-btn:hover:not(.active) {
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.account-form {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.info-box i {
+    color: var(--accent);
+    margin-top: 2px;
+}
