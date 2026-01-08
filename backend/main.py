@@ -107,7 +107,8 @@ VCF_SCHEMA = {
     "required": ["fn"]
 }
 
-origins = ["*"]
+# Parse CORS origins from settings (comma-separated string to list)
+origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -410,7 +411,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_session)):
     return {
         "message": "Account created successfully",
         "account_type": "unlicensed",
-        "notice": "You have registered with an unlicensed account. You can scan up to 4 business cards. To scan more cards and unlock full features, please contact a distributor to upgrade to a licensed account."
+        "notice": f"You have registered with an unlicensed account. You can scan up to {settings.FREE_TIER_SCAN_LIMIT} business cards. To scan more cards and unlock full features, please contact a distributor to upgrade to a licensed account."
     }
 
 @app.post("/api/check-status")
@@ -867,11 +868,11 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
                     license_expires_at = user_license.created_at + timedelta(days=365)
                 else:
                     license_status = "expired"
-                    scans_remaining = max(0, 4 - user.scan_count)
+                    scans_remaining = max(0, settings.FREE_TIER_SCAN_LIMIT - user.scan_count)
                     license_expires_at = user_license.created_at + timedelta(days=365)
         else:
             # No license - show remaining free scans
-            scans_remaining = max(0, 4 - user.scan_count)
+            scans_remaining = max(0, settings.FREE_TIER_SCAN_LIMIT - user.scan_count)
 
         # Check granted scopes
         scope_info = check_granted_scopes(user, db)
@@ -1249,9 +1250,35 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
 
     try:
         print(f"[AI PROCESSING ASYNC] Sending request to AI model...")
-        response = await acompletion(
-            model=settings.LLM_MODEL, messages=messages, response_format={ "type": "json_object" }
-        )
+
+        # Determine the provider and model name
+        if settings.LLM_MODEL.startswith("gemini/"):
+            # Let LiteLLM handle Gemini routing automatically
+            model_name = settings.LLM_MODEL
+            api_params = {
+                "model": model_name,
+                "messages": messages,
+                "response_format": {"type": "json_object"}
+            }
+        else:
+            # Force Groq provider for all other models
+            # Preserve the full model name and just ensure groq/ prefix
+            if settings.LLM_MODEL.startswith("groq/"):
+                model_name = settings.LLM_MODEL
+            else:
+                # Prepend groq/ to the model name (preserves any existing prefixes like openai/gpt-oss-20b)
+                model_name = f"groq/{settings.LLM_MODEL}"
+
+            print(f"[AI PROCESSING ASYNC] Using Groq provider with model: {model_name}")
+
+            api_params = {
+                "model": model_name,
+                "messages": messages,
+                "response_format": {"type": "json_object"},
+                "custom_llm_provider": "groq"
+            }
+
+        response = await acompletion(**api_params)
         print(f"[AI PROCESSING ASYNC] ✅ Received response from AI")
 
         content = response.choices[0].message.content
@@ -1587,13 +1614,13 @@ async def process_and_send_email_enterprise(admin: EnterpriseAdmin, contact_data
 
 def background_bulk_worker(user_identifier: str, db_session: Session):
     """Background worker for single users and enterprise admins."""
-    # Try to find user by email OR username (single user)
-    statement = select(User).where(or_(User.email == user_identifier, User.username == user_identifier))
+    # Try to find user by email (single user)
+    statement = select(User).where(User.email == user_identifier)
     user = db_session.exec(statement).first()
 
-    # If not found, try enterprise admin by username
+    # If not found, try enterprise admin by email
     if not user:
-        statement = select(EnterpriseAdmin).where(EnterpriseAdmin.username == user_identifier)
+        statement = select(EnterpriseAdmin).where(EnterpriseAdmin.email == user_identifier)
         user = db_session.exec(statement).first()
 
     if not user: return
@@ -1649,12 +1676,12 @@ async def scan_card(
 
         has_valid_license = is_license_valid(user_license)
 
-        # If no valid license, enforce 4-image scan limit
+        # If no valid license, enforce scan limit from config
         if not has_valid_license:
-            if user.scan_count >= 4:
+            if user.scan_count >= settings.FREE_TIER_SCAN_LIMIT:
                 raise HTTPException(
                     status_code=403,
-                    detail="Scan limit reached. You have used all 4 free scans for unlicensed accounts. Please contact a distributor to upgrade to a licensed account for unlimited scanning."
+                    detail=f"Scan limit reached. You have used all {settings.FREE_TIER_SCAN_LIMIT} free scans for unlicensed accounts. Please contact a distributor to upgrade to a licensed account for unlimited scanning."
                 )
 
             # Increment scan count after successful scan (will be committed at the end)

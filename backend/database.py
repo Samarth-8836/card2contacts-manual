@@ -2,12 +2,13 @@ from typing import Optional
 from datetime import datetime, timedelta
 from sqlmodel import Field, SQLModel, create_engine, Session, select
 from passlib.context import CryptContext
+from backend.config import settings
 
 # ==============================================================================
 # 1. Database Setup
 # ==============================================================================
-DATABASE_URL = "postgresql://admin:securepassword@localhost:5432/scanner_prod"
-engine = create_engine(DATABASE_URL)
+# Use centralized DATABASE_URL from settings
+engine = create_engine(settings.DATABASE_URL)
 
 # ==============================================================================
 # 2. Password Hashing

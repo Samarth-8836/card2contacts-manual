@@ -290,6 +290,9 @@ const CFG = {
 // ==========================================
 
 function updateHUD() {
+    // 0. Mode Slider Position
+    els.modeSlider.style.transform = state.mode === 'single' ? 'translateX(0)' : 'translateX(100%)';
+
     // 1. Shutter Button Border (Yellow for "Waiting for Back")
     if (state.mode === 'dual' && state.tempFront) {
         els.shutterBtn.style.border = "4px solid #FFC107";
@@ -1050,6 +1053,9 @@ async function checkSessionAndRecovery() {
 
         // C. Init Camera Only After Success
         initCamera();
+
+        // Initialize mode slider position
+        updateHUD();
 
         // D. Recover Bulk State (skip for sub-accounts as they don't use bulk)
         if (state.isGoogleConnected && state.userType !== 'sub_account') {
@@ -2094,7 +2100,7 @@ async function renderSubAccounts(subAccounts) {
         return `
         <div class="sub-account-card ${sub.is_active ? '' : 'inactive'}">
             <div class="sub-account-info">
-                <span class="username">${escapeHtml(sub.username)}</span>
+                <span class="username">${escapeHtml(sub.email)}</span>
                 <span class="status ${sub.is_logged_in ? 'online' : ''}">
                     ${sub.is_active ? (sub.is_logged_in ? 'Online' : 'Offline') : 'Deactivated'}
                 </span>
@@ -2106,13 +2112,13 @@ async function renderSubAccounts(subAccounts) {
                 </select>
             </div>
             <div class="sub-account-actions">
-                <button class="sub-action-btn export" onclick="exportSubAccount(${sub.id}, '${escapeHtml(sub.username)}')" title="Export Contacts">
+                <button class="sub-action-btn export" onclick="exportSubAccount(${sub.id}, '${escapeHtml(sub.email)}')" title="Export Contacts">
                     <i class="fa-solid fa-download"></i> Export
                 </button>
                 <button class="sub-action-btn toggle ${sub.is_active ? '' : 'off'}" onclick="toggleSubAccount(${sub.id}, ${!sub.is_active})" title="${sub.is_active ? 'Deactivate' : 'Activate'}">
                     <i class="fa-solid ${sub.is_active ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
                 </button>
-                <button class="sub-action-btn edit" onclick="openEditSubAccount(${sub.id}, '${escapeHtml(sub.username)}')" title="Edit">
+                <button class="sub-action-btn edit" onclick="openEditSubAccount(${sub.id}, '${escapeHtml(sub.email)}')" title="Edit">
                     <i class="fa-solid fa-pen"></i>
                 </button>
             </div>
