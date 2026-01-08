@@ -1,18 +1,43 @@
-fastapi
-uvicorn
-python-multipart
-# Core dependencies
-# paddlepaddle==2.6.1
-# paddleocr==2.7.3
+# ==========================================
+# DIGICARD ENTERPRISE - PRODUCTION DEPENDENCIES
+# ==========================================
+
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+
+# Database
+sqlmodel==0.0.22
+psycopg2-binary==2.9.9
+alembic==1.13.3
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+pydantic-settings==2.6.1
+
+# HTTP Client
+httpx==0.27.2
+
+# Image Processing
 numpy<2.0.0
-opencv-python-headless
-Pillow
-# AI Provider
-litellm
-google-generativeai
+opencv-python-headless==4.10.0.84
+Pillow==11.0.0
+
+# AI/LLM Provider
+litellm==1.52.10
+google-generativeai==0.8.3
+
+# OCR Provider
+mistralai==1.2.4
+
 # Google Integration
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client
-requests
+google-auth==2.36.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-api-python-client==2.154.0
+
+# Utilities
+requests==2.32.3
+python-dotenv==1.0.1
