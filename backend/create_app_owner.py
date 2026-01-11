@@ -18,6 +18,7 @@ from sqlmodel import Session, select
 sys.path.insert(0, '.')
 
 from backend.database import engine, AppOwner, create_db_and_tables, get_password_hash
+from backend.config import settings
 
 
 def create_app_owner():
@@ -89,8 +90,8 @@ def create_app_owner():
             print(f"ID:        {app_owner.id}")
             print(f"Created:   {app_owner.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
             print("\n" + "="*60)
-            print("\nYou can now login to the admin dashboard at:")
-            print("  http://localhost:8000/admin.html")
+            print("\nYou can now login to admin dashboard at:")
+            print(f"  {settings.FRONTEND_URL}/admin.html")
             print("\nUse the email and password you just created to login.")
             print("="*60 + "\n")
 

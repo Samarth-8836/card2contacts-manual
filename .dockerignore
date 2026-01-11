@@ -1,0 +1,25 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+.git
+.gitignore
+*.md
+aggregated_filecontents.txt
+aggregator.py
+certs/
+.claude/
+google Oauth client details.txt
+.env.local
+.env.production.local
+docker-compose.yml
+backup.sh
+backups/
+*.log

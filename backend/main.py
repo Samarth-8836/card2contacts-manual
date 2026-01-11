@@ -27,7 +27,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 from backend.config import settings
 from backend.ocr import get_ocr_service, initialize_ocr_service
 
-from backend.database import create_db_and_tables, get_session, User, verify_password, get_password_hash, License, EnterpriseAdmin, SubAccount, Distributor, DistributorLicense, DistributorPurchase, OTPRecord, AppOwner, is_license_valid
+from backend.database import create_db_and_tables, get_session, User, verify_password, get_password_hash, License, EnterpriseAdmin, SubAccount, Distributor, DistributorLicense, DistributorPurchase, OTPRecord, AppOwner, is_license_valid, safe_commit
 from backend.email_utils import send_otp_email, send_password_reset_email, send_account_credentials_email, send_sub_account_otp_email, send_distributor_contact_request_email, generate_otp, generate_random_password, mask_email
 from sqlmodel import or_
 from backend.google_utils import (
@@ -1113,7 +1113,8 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
                     google_connected=True  # Auto-link since signed up with Google
                 )
                 db.add(user)
-                db.commit()
+                if not safe_commit(db):
+                    raise HTTPException(status_code=500, detail="Failed to create user")
                 db.refresh(user)
                 is_first_time_linking = True  # First time signing up via Google
             else:
@@ -1156,7 +1157,8 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
         session_id = str(uuid.uuid4())
         user.current_session_id = session_id
         db.add(user)
-        db.commit()
+        if not safe_commit(db):
+            raise HTTPException(status_code=500, detail="Failed to update session")
 
         # Get correct identifier based on user type
         identifier = getattr(user, 'email', None) or getattr(user, 'username')

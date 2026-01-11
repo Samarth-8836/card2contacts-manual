@@ -7,8 +7,15 @@ from backend.config import settings
 # ==============================================================================
 # 1. Database Setup
 # ==============================================================================
-# Use centralized DATABASE_URL from settings
-engine = create_engine(settings.DATABASE_URL)
+# Use centralized DATABASE_URL from settings with connection pool configuration
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_timeout=settings.DB_POOL_TIMEOUT,
+    pool_recycle=settings.DB_POOL_RECYCLE,
+    pool_pre_ping=True
+)
 
 # ==============================================================================
 # 2. Password Hashing
@@ -182,7 +189,13 @@ def create_db_and_tables():
 
 def get_session():
     with Session(engine) as session:
-        yield session
+        try:
+            yield session
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -210,3 +223,17 @@ def is_license_valid(license: Optional[License]) -> bool:
         return False
 
     return True
+
+def safe_commit(db: Session) -> bool:
+    """
+    Safely commit changes to database with proper error handling.
+    Returns True if successful, False otherwise.
+    Always rolls back on failure.
+    """
+    try:
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"Database commit failed: {e}")
+        return False

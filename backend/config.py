@@ -13,17 +13,23 @@ class Settings(BaseSettings):
     # ==========================================
     # DEPLOYMENT & ENVIRONMENT
     # ==========================================
-    ENVIRONMENT: str = "development"  # Options: "development", "staging", "production"
-    FRONTEND_URL: str = "https://192.168.29.234.sslip.io:8000"  # Change for production
-    BACKEND_URL: str = "https://192.168.29.234.sslip.io:8000"   # Change for production
+    ENVIRONMENT: str = "production"  # Options: "development", "staging", "production"
+    FRONTEND_URL: str = "https://app.card2contacts.com"  # Default production URL
+    BACKEND_URL: str = "https://app.card2contacts.com"  # Default production URL
 
     # CORS Origins - restrict in production for security
-    ALLOWED_ORIGINS: str = "*"  # In production, use: "https://yourdomain.com,https://www.yourdomain.com"
+    ALLOWED_ORIGINS: str = "https://app.card2contacts.com"  # Default to production domain
 
     # ==========================================
     # DATABASE
     # ==========================================
     DATABASE_URL: str = "postgresql://admin:securepassword@localhost:5432/scanner_prod"
+
+    # Database Connection Pool Settings
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 40
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 3600
 
     # ==========================================
     # AUTHENTICATION & SECURITY
@@ -35,9 +41,9 @@ class Settings(BaseSettings):
     # ==========================================
     # GOOGLE OAUTH
     # ==========================================
-    GOOGLE_CLIENT_ID: str
-    GOOGLE_CLIENT_SECRET: str
-    REDIRECT_URI: str = "https://192.168.29.234.sslip.io:8000/api/auth/google/callback"  # Change for production
+    GOOGLE_CLIENT_ID: str = ""  # Required - set in .env
+    GOOGLE_CLIENT_SECRET: str = ""  # Required - set in .env
+    REDIRECT_URI: str = "https://app.card2contacts.com/api/auth/google/callback"  # Default production URL
 
     # ==========================================
     # AI/LLM CONFIGURATION - SINGLE PLACE TO CHANGE AI PROVIDER
@@ -100,6 +106,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = 'utf-8'
         case_sensitive = True
+        extra = "ignore"
 
 
 # Global settings instance

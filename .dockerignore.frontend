@@ -1,0 +1,9 @@
+.git
+.gitignore
+*.md
+aggregated_filecontents.txt
+aggregator.py
+certs/
+.claude/
+google Oauth client details.txt
+backend/

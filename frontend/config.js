@@ -13,7 +13,7 @@ const CONFIG = {
     // ==========================================
     // DEPLOYMENT & ENVIRONMENT
     // ==========================================
-    ENVIRONMENT: 'development',  // Options: 'development', 'staging', 'production'
+    ENVIRONMENT: 'production',  // Options: 'development', 'staging', 'production'
 
     // Backend API Configuration
     // For local development: empty string means same origin (relative URLs)
@@ -21,7 +21,7 @@ const CONFIG = {
     API_BASE_URL: '',  // Change to 'https://your-production-backend-url.com' for production
 
     // Frontend URL (for redirects, share links, etc.)
-    FRONTEND_URL: 'https://192.168.29.234.sslip.io:8000',  // Change to your production domain
+    FRONTEND_URL: 'https://app.card2contacts.com',  // Change to your production domain
 
     // ==========================================
     // GOOGLE OAUTH
@@ -55,8 +55,8 @@ const CONFIG = {
     // ==========================================
     // DEBUG & LOGGING
     // ==========================================
-    ENABLE_CONSOLE_LOGS: true,  // Set to false in production to reduce console noise
-    ENABLE_ERROR_REPORTING: false,  // Set to true to enable error reporting service
+    ENABLE_CONSOLE_LOGS: false,  // Set to false in production to reduce console noise
+    ENABLE_ERROR_REPORTING: true,  // Set to true to enable error reporting service
 };
 
 // ==========================================

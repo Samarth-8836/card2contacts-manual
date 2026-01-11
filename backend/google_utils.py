@@ -14,7 +14,7 @@ from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from backend.database import User, EnterpriseAdmin, SubAccount
+from backend.database import User, EnterpriseAdmin, SubAccount, safe_commit
 
 # ==========================================
 # CONFIGURATION & CONSTANTS
@@ -111,7 +111,9 @@ def get_google_creds(user, db: Session):
             creds.refresh(Request())
             user.google_access_token = creds.token
             db.add(user)
-            db.commit()
+            if not safe_commit(db):
+                print(f"Token Refresh DB Commit Failed")
+                return None
         except RefreshError:
             user_id = getattr(user, 'email', None) or getattr(user, 'username', 'Unknown')
             print(f"⚠️ Google Token Revoked for {user_id}. Disconnecting.")
@@ -119,7 +121,7 @@ def get_google_creds(user, db: Session):
             user.google_access_token = None
             user.google_refresh_token = None
             db.add(user)
-            db.commit()
+            safe_commit(db)
             return None
         except Exception as e:
             print(f"Token Refresh Network Error: {e}")
@@ -941,9 +943,9 @@ def append_to_sheet(user: User, db: Session, row_data: list):
             if new_id:
                 user.google_spreadsheet_id = new_id
                 db.add(user)
-                db.commit()
-                append_to_sheet(user, db, row_data)
-                return "Recreated"
+                if safe_commit(db):
+                    append_to_sheet(user, db, row_data)
+                    return "Recreated"
         
         handle_google_api_error(e, "Saving Contact")
 
@@ -1213,7 +1215,8 @@ def create_sub_account_sheet(admin: EnterpriseAdmin, sub_account: SubAccount, db
         # Update sub-account record with sheet name
         sub_account.sheet_name = sheet_name
         db.add(sub_account)
-        db.commit()
+        if not safe_commit(db):
+            raise HTTPException(status_code=500, detail="Failed to save sub-account sheet")
 
         return sheet_name
     except HttpError as e:
@@ -1232,14 +1235,18 @@ def append_to_sub_account_sheet(admin: EnterpriseAdmin, sub_account: SubAccount,
         if ssid:
             admin.google_spreadsheet_id = ssid
             db.add(admin)
-            db.commit()
+            if not safe_commit(db):
+                raise HTTPException(status_code=500, detail="Failed to save spreadsheet ID")
 
     # Ensure sheet exists for this sub-account
     if not sub_account.sheet_name:
         create_sub_account_sheet(admin, sub_account, db)
 
     # Refresh the sheet_name in case it was just created
-    db.refresh(sub_account)
+    try:
+        db.refresh(sub_account)
+    except Exception as refresh_error:
+        raise HTTPException(status_code=500, detail=f"Failed to refresh sub-account: {refresh_error}")
     sheet_name = sub_account.sheet_name
 
     try:

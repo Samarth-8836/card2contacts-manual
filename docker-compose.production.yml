@@ -8,17 +8,20 @@ services:
     restart: always
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: securepassword
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: scanner_prod
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # Only accessible from localhost
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups  # Mount backups directory
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d scanner_prod"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - scanner_network
 
   # 2. Backend
   backend:
@@ -28,26 +31,41 @@ services:
     container_name: scanner_backend
     restart: always
     environment:
-      DATABASE_URL: postgresql://admin:securepassword@db:5432/scanner_prod
-    ports:
-      - "8000:8000"
+      DATABASE_URL: postgresql://admin:${POSTGRES_PASSWORD}@db:5432/scanner_prod
+    env_file:
+      - .env.production
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - .env
+    networks:
+      - scanner_network
+    expose:
+      - "8000"
+    volumes:
+      - .env.production:/app/.env:ro
 
   # 3. Frontend
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        NGINX_CONF: nginx-production.conf
     container_name: scanner_frontend
     restart: always
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/ssl:ro  # Mount SSL certificates
     depends_on:
       - backend
+    networks:
+      - scanner_network
+
+networks:
+  scanner_network:
+    driver: bridge
 
 volumes:
   postgres_data:
