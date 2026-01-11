@@ -55,3 +55,7 @@ Thumbs.db
 
 # Claude AI
 .claude/
+
+# Ignore aggregated file (contains old secrets)
+aggregated_filecontents.txt
+aggregator.py
