@@ -3060,5 +3060,3 @@ def get_all_users(
         "total_users": len(all_users),
         "users": all_users
     }
-
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
