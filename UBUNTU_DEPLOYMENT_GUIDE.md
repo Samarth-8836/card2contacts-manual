@@ -127,7 +127,7 @@ cp .env.production .env.production.local
 nano .env.production.local
 ```
 
-Update these critical values:
+Update these critical values in .env.production.local, then copy the contents to .env.production:
 
 ```env
 # Database password (use the one you generated)
@@ -238,7 +238,7 @@ docker-compose -f docker-compose.production.yml exec backend bash
 ### 8.2 Create Admin User
 
 ```bash
-python create_app_owner.py
+python backend/create_app_owner.py
 ```
 
 Follow the prompts to create the application owner account. The admin panel URL will be displayed after creation.
@@ -248,7 +248,7 @@ Follow the prompts to create the application owner account.
 ### 8.3 Create Enterprise Admin (Optional)
 
 ```bash
-python create_enterprise_admin.py
+python backend/create_enterprise_admin.py
 ```
 
 ### 8.4 Exit Container

@@ -35,19 +35,19 @@ google-api-python-client==2.154.0
 # AI/LLM PROVIDERS
 # ==============================================================================
 # LiteLLM - unified LLM interface (Groq, Gemini, etc.)
-litellm==1.55.8
+litellm>=1.56.0
 
 # Google Generative AI (Gemini)
 google-generativeai==0.8.3
 
 # Mistral AI - OCR Provider
-mistralai==1.2.6
+mistralai==1.10.0
 
 # ==============================================================================
 # HTTP CLIENTS
 # ==============================================================================
-httpx==0.28.1
-requests==2.32.3
+httpx
+requests
 
 # ==============================================================================
 # IMAGE PROCESSING & OCR
