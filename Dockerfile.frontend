@@ -15,7 +15,7 @@ RUN envsubst '$APP_DOMAIN' < /tmp/frontend/config.js > /tmp/config.js && \
     mv /tmp/config.js /tmp/frontend/config.js
 
 # Copy all frontend files to nginx html directory
-COPY --from=0 /tmp/frontend/ /usr/share/nginx/html/
+RUN cp -r /tmp/frontend/* /usr/share/nginx/html/
 
 # Copy nginx configuration (supports build arg for different configs)
 ARG NGINX_CONF=nginx.conf
