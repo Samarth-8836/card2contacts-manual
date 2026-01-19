@@ -5,8 +5,9 @@
  * Change these values for different deployment environments.
  *
  * IMPORTANT: When deploying to production, update:
- * 1. API_BASE_URL to your production backend URL
- * 2. GOOGLE_CLIENT_ID to your production Google OAuth client ID (if different)
+ * 1. Set APP_DOMAIN environment variable (e.g., dev.card2contacts.com, app.card2contacts.com)
+ * 2. The FRONTEND_URL below will be automatically replaced during Docker build using envsubst
+ * 3. GOOGLE_CLIENT_ID to your production Google OAuth client ID (if different)
  */
 
 const CONFIG = {
@@ -21,7 +22,8 @@ const CONFIG = {
     API_BASE_URL: '',  // Change to 'https://your-production-backend-url.com' for production
 
     // Frontend URL (for redirects, share links, etc.)
-    FRONTEND_URL: 'https://app.card2contacts.com',  // Change to your production domain
+    // This will be replaced during Docker build with the APP_DOMAIN environment variable
+    FRONTEND_URL: '${APP_DOMAIN}',  // Template variable - replaced at build time
 
     // ==========================================
     // GOOGLE OAUTH

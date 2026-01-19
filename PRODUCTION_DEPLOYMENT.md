@@ -25,20 +25,25 @@ cp .env.example .env
 
 #### Critical Values to Change:
 
-1. **ENVIRONMENT** - Set to `production`
-2. **FRONTEND_URL** - Your production frontend URL (e.g., `https://yourdomain.com`)
-3. **BACKEND_URL** - Your production backend URL (same as frontend for single-server setup)
-4. **ALLOWED_ORIGINS** - Restrict to your actual domains (e.g., `https://yourdomain.com,https://www.yourdomain.com`)
-5. **DATABASE_URL** - Production PostgreSQL connection string
-6. **SECRET_KEY** - Generate a strong random key:
+1. **APP_DOMAIN** - Set your production domain (e.g., `https://app.card2contacts.com`)
+   - This is the single source of truth for all URLs
+   - All other URLs are automatically derived from this
+2. **ENVIRONMENT** - Set to `production`
+3. **DATABASE_URL** - Production PostgreSQL connection string
+4. **SECRET_KEY** - Generate a strong random key:
    ```bash
    openssl rand -hex 32
    ```
-7. **REDIRECT_URI** - Update with production domain (e.g., `https://yourdomain.com/api/auth/google/callback`)
-8. **GOOGLE_CLIENT_ID** and **GOOGLE_CLIENT_SECRET** - Production OAuth credentials
-9. **API Keys** - Set the appropriate AI and OCR service keys:
+5. **GOOGLE_CLIENT_ID** and **GOOGLE_CLIENT_SECRET** - Production OAuth credentials
+6. **API Keys** - Set the appropriate AI and OCR service keys:
    - `GROQ_API_KEY` or `GEMINI_API_KEY` (depending on your AI model choice)
    - `MISTRAL_API_KEY` (for OCR)
+
+**Note:** The following URLs are automatically derived from `APP_DOMAIN`:
+- `FRONTEND_URL`: https://your-domain.com
+- `BACKEND_URL`: https://your-domain.com
+- `ALLOWED_ORIGINS`: https://your-domain.com
+- `REDIRECT_URI`: https://your-domain.com/api/auth/google/callback
 
 #### Business Logic Settings (Optional):
 
@@ -50,13 +55,14 @@ cp .env.example .env
 
 ### 2. Frontend Configuration (frontend/config.js)
 
-Update the following values in `frontend/config.js`:
+**Note:** `FRONTEND_URL` is automatically set during Docker build from `APP_DOMAIN` environment variable. You don't need to manually edit `frontend/config.js` for domain changes.
 
+The file uses a template variable that gets replaced:
 ```javascript
 const CONFIG = {
     ENVIRONMENT: 'production',
     API_BASE_URL: '',  // Empty for same-origin, or set to backend URL if different
-    FRONTEND_URL: 'https://yourdomain.com',
+    FRONTEND_URL: '${APP_DOMAIN}',  // Replaced during Docker build
     ENABLE_CONSOLE_LOGS: false,  // Disable in production
     ENABLE_ERROR_REPORTING: true,  // Enable if using error reporting service
 };
@@ -68,9 +74,9 @@ Update your Google Cloud Console OAuth client:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Update **Authorized JavaScript origins**:
-   - Add your production domain: `https://yourdomain.com`
+   - Add your production domain (from `APP_DOMAIN`): `https://yourdomain.com`
 3. Update **Authorized redirect URIs**:
-   - Add: `https://yourdomain.com/api/auth/google/callback`
+   - Add your OAuth callback URL (derived from `APP_DOMAIN`): `https://yourdomain.com/api/auth/google/callback`
 4. Copy the Client ID and Secret to your `.env` file
 
 ### 4. SSL/TLS Certificates
@@ -101,17 +107,18 @@ sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 
 | File | What to Change |
 |------|----------------|
-| `.env` | All environment variables (see `.env.example`) |
-| `frontend/config.js` | `ENVIRONMENT`, `FRONTEND_URL`, `API_BASE_URL` |
+| `.env` | Set `APP_DOMAIN` and all environment variables (see `.env.example`) |
 | Google Cloud Console | OAuth redirect URIs for production domain |
 
 ### Single Points of Configuration:
 
 | Setting | Location | Purpose |
 |---------|----------|---------|
-| Backend URL | `.env` → `BACKEND_URL` | API endpoint URL |
-| Frontend URL | `.env` → `FRONTEND_URL` & `frontend/config.js` → `FRONTEND_URL` | Application URL |
-| CORS Origins | `.env` → `ALLOWED_ORIGINS` | Allowed origins for API requests |
+| Domain | `.env` → `APP_DOMAIN` | Single source of truth for all URLs |
+| Frontend URL | Derived from `APP_DOMAIN` | Application URL |
+| Backend URL | Derived from `APP_DOMAIN` | API endpoint URL |
+| CORS Origins | Derived from `APP_DOMAIN` | Allowed origins for API requests |
+| OAuth Redirect | Derived from `APP_DOMAIN` | Google OAuth callback URL |
 | Database | `.env` → `DATABASE_URL` | PostgreSQL connection |
 | AI Model | `.env` → `LLM_MODEL` | Which AI model to use |
 | OCR Provider | `.env` → `OCR_PROVIDER` | Which OCR service to use |

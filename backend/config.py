@@ -14,11 +14,26 @@ class Settings(BaseSettings):
     # DEPLOYMENT & ENVIRONMENT
     # ==========================================
     ENVIRONMENT: str = "production"  # Options: "development", "staging", "production"
-    FRONTEND_URL: str = "https://app.card2contacts.com"  # Default production URL
-    BACKEND_URL: str = "https://app.card2contacts.com"  # Default production URL
 
-    # CORS Origins - restrict in production for security
-    ALLOWED_ORIGINS: str = "https://app.card2contacts.com"  # Default to production domain
+    # Domain Configuration - SINGLE SOURCE OF TRUTH
+    # All URLs are derived from APP_DOMAIN
+    # Set this in .env to change the application domain (e.g., dev.card2contacts.com)
+    APP_DOMAIN: str = "app.card2contacts.com"  # Default production domain
+
+    @property
+    def FRONTEND_URL(self) -> str:
+        """Frontend URL derived from APP_DOMAIN"""
+        return f"https://{self.APP_DOMAIN}"
+
+    @property
+    def BACKEND_URL(self) -> str:
+        """Backend URL derived from APP_DOMAIN"""
+        return f"https://{self.APP_DOMAIN}"
+
+    @property
+    def ALLOWED_ORIGINS(self) -> str:
+        """CORS origins derived from APP_DOMAIN"""
+        return f"https://{self.APP_DOMAIN}"
 
     # ==========================================
     # DATABASE
@@ -43,7 +58,11 @@ class Settings(BaseSettings):
     # ==========================================
     GOOGLE_CLIENT_ID: str = ""  # Required - set in .env
     GOOGLE_CLIENT_SECRET: str = ""  # Required - set in .env
-    REDIRECT_URI: str = "https://app.card2contacts.com/api/auth/google/callback"  # Default production URL
+
+    @property
+    def REDIRECT_URI(self) -> str:
+        """OAuth redirect URI derived from APP_DOMAIN"""
+        return f"https://{self.APP_DOMAIN}/api/auth/google/callback"
 
     # ==========================================
     # AI/LLM CONFIGURATION - SINGLE PLACE TO CHANGE AI PROVIDER
@@ -66,7 +85,7 @@ class Settings(BaseSettings):
 
     # AI Provider API Keys
     GEMINI_API_KEY: Optional[str] = None  # For Gemini models
-    GROQ_API_KEY: Optional[str] = None     # For Groq models
+    GROQ_API_KEY: Optional[str] = None  # For Groq models
 
     # ==========================================
     # OCR CONFIGURATION - SINGLE PLACE TO CHANGE PROVIDER
@@ -100,11 +119,11 @@ class Settings(BaseSettings):
     # RATE LIMITING (Future use)
     # ==========================================
     RATE_LIMIT_PER_MINUTE: int = 60  # API requests per minute per user
-    BULK_SCAN_MAX_FILES: int = 100   # Maximum files in a single bulk scan
+    BULK_SCAN_MAX_FILES: int = 100  # Maximum files in a single bulk scan
 
     class Config:
         env_file = ".env"
-        env_file_encoding = 'utf-8'
+        env_file_encoding = "utf-8"
         case_sensitive = True
         extra = "ignore"
 

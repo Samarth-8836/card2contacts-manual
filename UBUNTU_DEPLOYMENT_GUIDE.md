@@ -5,10 +5,10 @@ This guide provides step-by-step instructions to deploy DigiCard Enterprise to a
 ## Prerequisites
 
 - Ubuntu 20.04 LTS or 22.04 LTS
-- Domain name pointing to your server (app.card2contacts.com)
+- Domain name pointing to your server (e.g., app.card2contacts.com or dev.card2contacts.com)
 - Root or sudo access
 - At least 2GB RAM and 20GB disk space
-- Valid SSL certificate for app.card2contacts.com
+- Valid SSL certificate for your domain
 
 ---
 
@@ -81,12 +81,12 @@ git clone <your-repo-url> .
 # Create directory for certificates
 sudo mkdir -p /opt/digicard/certs
 
-# Get certificate (standalone mode)
-sudo certbot certonly --standalone -d app.card2contacts.com
+# Get certificate (standalone mode) - replace your-domain.com with your actual domain
+sudo certbot certonly --standalone -d your-domain.com
 
-# Copy certificates to application directory
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/fullchain.pem /opt/digicard/certs/
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/privkey.pem /opt/digicard/certs/
+# Copy certificates to application directory - replace your-domain.com with your actual domain
+sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem /opt/digicard/certs/
+sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem /opt/digicard/certs/
 
 # Set permissions
 sudo chown -R $USER:$USER /opt/digicard/certs/
@@ -99,10 +99,10 @@ sudo chmod 644 /opt/digicard/certs/*
 sudo crontab -e
 ```
 
-Add this line at the end:
+Add this line at the end (replace your-domain.com with your actual domain):
 
 ```
-0 3 * * * certbot renew --quiet --post-hook "cp /etc/letsencrypt/live/app.card2contacts.com/fullchain.pem /opt/digicard/certs/ && cp /etc/letsencrypt/live/app.card2contacts.com/privkey.pem /opt/digicard/certs/ && docker-compose -f /opt/digicard/docker-compose.production.yml restart frontend"
+0 3 * * * certbot renew --quiet --post-hook "cp /etc/letsencrypt/live/your-domain.com/fullchain.pem /opt/digicard/certs/ && cp /etc/letsencrypt/live/your-domain.com/privkey.pem /opt/digicard/certs/ && docker-compose -f /opt/digicard/docker-compose.production.yml restart frontend"
 ```
 
 ---
@@ -127,9 +127,16 @@ cp .env.production .env.production.local
 nano .env.production.local
 ```
 
-Update these critical values in .env.production.local, then copy the contents to .env.production:
+**IMPORTANT**: Set your domain using the `APP_DOMAIN` variable. All URLs will be automatically derived from this single value:
 
 ```env
+# Domain Configuration - SINGLE SOURCE OF TRUTH
+APP_DOMAIN=https://your-domain.com
+
+# Examples:
+# APP_DOMAIN=https://app.card2contacts.com
+# APP_DOMAIN=https://dev.card2contacts.com
+
 # Database password (use the one you generated)
 POSTGRES_PASSWORD=<your-generated-password>
 
@@ -263,9 +270,11 @@ exit
 
 ### 9.1 Access the Application
 
-- Main App: https://app.card2contacts.com
-- Admin Panel: https://app.card2contacts.com/admin.html
-- API Documentation: https://app.card2contacts.com/api/docs
+Replace `your-domain.com` with the domain you set in `APP_DOMAIN`:
+
+- Main App: https://your-domain.com
+- Admin Panel: https://your-domain.com/admin.html
+- API Documentation: https://your-domain.com/api/docs
 
 ### 9.2 Test Key Features
 
@@ -341,12 +350,12 @@ sudo systemctl start digicard.service
 
 **Solution:**
 ```bash
-# Renew certificate
+# Renew certificate (replace your-domain.com with your actual domain)
 sudo certbot renew --force-renewal
 
-# Copy new certificates
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/fullchain.pem /opt/digicard/certs/
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/privkey.pem /opt/digicard/certs/
+# Copy new certificates (replace your-domain.com with your actual domain)
+sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem /opt/digicard/certs/
+sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem /opt/digicard/certs/
 
 # Restart frontend
 docker-compose -f docker-compose.production.yml restart frontend
@@ -422,15 +431,16 @@ docker-compose -f docker-compose.production.yml logs -f
 Before going to production, ensure:
 
 - [ ] SSL certificate is properly configured
+- [ ] `APP_DOMAIN` is set to your production domain (e.g., https://app.card2contacts.com)
 - [ ] `.env.production.local` created with production values
 - [ ] POSTGRES_PASSWORD is set to strong random string
 - [ ] SECRET_KEY is set to a strong random value
-- [ ] GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET configured
+- [ ] GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET configured for your domain
 - [ ] GROQ_API_KEY and MISTRAL_API_KEY configured
 - [ ] SMTP credentials configured
 - [ ] Firewall is configured (only 80, 443 open)
 - [ ] Database is not accessible from outside (only 127.0.0.1:5432)
-- [ ] ALLOWED_ORIGINS is restricted to `https://app.card2contacts.com`
+- [ ] ALLOWED_ORIGINS is restricted to your domain (automatically derived from APP_DOMAIN)
 - [ ] Regular backups are configured
 - [ ] SSL auto-renewal is set up
 - [ ] API keys are not committed to git

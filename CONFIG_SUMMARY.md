@@ -2,10 +2,29 @@
 
 ## Overview
 
-All configurable values have been centralized into **two main files** for easy production deployment:
+All configurable values have been centralized for easy production deployment:
 
 1. **Backend**: `backend/config.py` + `.env` file
-2. **Frontend**: `frontend/config.js`
+2. **Frontend**: `frontend/config.js` (with `APP_DOMAIN` substituted at build time)
+
+## IMPORTANT: Domain Configuration
+
+**Single Source of Truth for Domain:**
+
+Set `APP_DOMAIN` in your `.env` file and all URLs will be automatically derived:
+
+```bash
+# In .env.production or .env
+APP_DOMAIN=https://your-domain.com
+```
+
+**Automatically Derived URLs:**
+- `FRONTEND_URL`: https://your-domain.com
+- `BACKEND_URL`: https://your-domain.com
+- `ALLOWED_ORIGINS`: https://your-domain.com
+- `REDIRECT_URI`: https://your-domain.com/api/auth/google/callback
+
+**No individual URL configuration needed!** Just set `APP_DOMAIN` once.
 
 ## What Changed
 
@@ -13,12 +32,14 @@ All configurable values have been centralized into **two main files** for easy p
 
 | Value | Old Location | New Location | Default Value |
 |-------|--------------|--------------|---------------|
-| URI Domain | Multiple places | `.env` → `FRONTEND_URL` | `https://192.168.29.234.sslip.io:8000` |
-| OAuth Redirect | Hardcoded | `.env` → `REDIRECT_URI` | `https://192.168.29.234.sslip.io:8000/api/auth/google/callback` |
+| URI Domain | Multiple places | `.env` → `APP_DOMAIN` | `app.card2contacts.com` |
+| Frontend URL | Hardcoded | Derived from `APP_DOMAIN` | `https://your-domain.com` |
+| Backend URL | Hardcoded | Derived from `APP_DOMAIN` | `https://your-domain.com` |
+| OAuth Redirect | Hardcoded | Derived from `APP_DOMAIN` | `https://your-domain.com/api/auth/google/callback` |
+| CORS Origins | Hardcoded | Derived from `APP_DOMAIN` | `https://your-domain.com` |
 | AI Model | `backend/config.py` | `.env` → `LLM_MODEL` | `groq/llama-3.1-8b-instant` |
 | OCR Provider | `backend/config.py` | `.env` → `OCR_PROVIDER` | `mistral` |
 | Free Scan Limit | Hardcoded as `4` | `.env` → `FREE_TIER_SCAN_LIMIT` | `4` |
-| CORS Origins | Hardcoded as `["*"]` | `.env` → `ALLOWED_ORIGINS` | `*` |
 | Database URL | Hardcoded in `database.py` | `.env` → `DATABASE_URL` | - |
 
 ### 📁 Files Modified
@@ -76,12 +97,18 @@ All configurable values have been centralized into **two main files** for easy p
 ```bash
 # Essential changes:
 ENVIRONMENT=production
-FRONTEND_URL=https://your-production-domain.com
-BACKEND_URL=https://your-production-domain.com
-ALLOWED_ORIGINS=https://your-production-domain.com
+
+# DOMAIN CONFIGURATION - Set this ONE variable:
+APP_DOMAIN=https://your-domain.com
+
+# All these URLs are automatically derived from APP_DOMAIN:
+# - FRONTEND_URL: https://your-domain.com
+# - BACKEND_URL: https://your-domain.com
+# - ALLOWED_ORIGINS: https://your-domain.com
+# - REDIRECT_URI: https://your-domain.com/api/auth/google/callback
+
 DATABASE_URL=postgresql://user:pass@host:5432/db
 SECRET_KEY=<generate-random-key>
-REDIRECT_URI=https://your-production-domain.com/api/auth/google/callback
 
 # Optional changes (adjust for your business):
 FREE_TIER_SCAN_LIMIT=4
@@ -105,11 +132,13 @@ MISTRAL_MODEL=mistral-ocr-2512
 const CONFIG = {
     ENVIRONMENT: 'production',
     API_BASE_URL: '',  // Same origin, or 'https://api.yourdomain.com' if different
-    FRONTEND_URL: 'https://your-production-domain.com',
+    FRONTEND_URL: '${APP_DOMAIN}',  // Replaced during Docker build with APP_DOMAIN
     ENABLE_CONSOLE_LOGS: false,  // Disable in production
-    ENABLE_ERROR_REPORTING: true,
+    ENABLE_ERROR_REPORTING: true,  // Enable if using error reporting service
 };
 ```
+
+**Note:** `FRONTEND_URL` is automatically set during Docker build from the `APP_DOMAIN` environment variable. You don't need to manually change this file.
 
 ### 3. Google OAuth (Google Cloud Console)
 

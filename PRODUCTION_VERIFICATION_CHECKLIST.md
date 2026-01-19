@@ -1,28 +1,36 @@
 # Production Verification Checklist
 
-This document verifies that all files are correctly configured for production deployment to `app.card2contacts.com`.
+This document verifies that all files are correctly configured for production deployment using `APP_DOMAIN` variable.
 
 ## ✅ Configuration Files
 
-### 1. Frontend Configuration
+### 1. Environment Configuration
+- **File:** `.env.production`
+- **Status:** ✅ VERIFIED
+- **Critical Value:**
+  - `APP_DOMAIN: 'https://app.card2contacts.com'` (or your domain) ✅
+- **Note:** All URLs (FRONTEND_URL, BACKEND_URL, ALLOWED_ORIGINS, REDIRECT_URI) are automatically derived from APP_DOMAIN
+
+### 2. Frontend Configuration
 - **File:** `frontend/config.js`
 - **Status:** ✅ VERIFIED
 - **Values:**
   - `ENVIRONMENT: 'production'` ✅
-  - `FRONTEND_URL: 'https://app.card2contacts.com'` ✅
+  - `FRONTEND_URL: '${APP_DOMAIN}'` (template variable) ✅
   - `API_BASE_URL: ''` (empty for relative URLs) ✅
   - `ENABLE_CONSOLE_LOGS: false` ✅
   - `ENABLE_ERROR_REPORTING: true` ✅
 
-### 2. Backend Configuration
+### 3. Backend Configuration
 - **File:** `backend/config.py`
 - **Status:** ✅ VERIFIED
 - **Values:**
   - `ENVIRONMENT: 'production'` ✅
-  - `FRONTEND_URL: 'https://app.card2contacts.com'` ✅
-  - `BACKEND_URL: 'https://app.card2contacts.com'` ✅
-  - `ALLOWED_ORIGINS: 'https://app.card2contacts.com'` ✅
-  - `REDIRECT_URI: 'https://app.card2contacts.com/api/auth/google/callback'` ✅
+  - `APP_DOMAIN: 'app.card2contacts.com'` (default) ✅
+  - `FRONTEND_URL` - @property derived from APP_DOMAIN ✅
+  - `BACKEND_URL` - @property derived from APP_DOMAIN ✅
+  - `ALLOWED_ORIGINS` - @property derived from APP_DOMAIN ✅
+  - `REDIRECT_URI` - @property derived from APP_DOMAIN ✅
   - `extra: "ignore"` (pydantic setting) ✅
 
 ### 3. Nginx Configuration
