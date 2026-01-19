@@ -121,6 +121,8 @@ openssl rand -hex 32
 
 ### 5.2 Create .env.production File
 
+IMPORTANT - HAVE BOTH FILES (.env.production and .env.production.local) UPDATED TO THE SAME VALUES SINCE BOTH ARE BEING USED SOMEWHERE
+
 ```bash
 cd /opt/digicard
 cp .env.production .env.production.local
@@ -220,6 +222,7 @@ curl -I http://localhost:8000
 
 ## Step 7: Configure Firewall
 
+IMPORTANT - if we only allow 80 and 443 then we will not be able to SSH into the server again. Do not enable firewall or if strictly needed then allow ssh with it otherwise we will be locked out.
 ```bash
 # Allow HTTP and HTTPS
 sudo ufw allow 80/tcp
