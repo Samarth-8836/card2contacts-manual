@@ -14,31 +14,37 @@ The UBUNTU_DEPLOYMENT_GUIDE.md has been updated to reflect the exact current dep
    - Removed step to stop system nginx service
    - No system nginx to stop since it's containerized
 
-3. **Step 8.2 - Clarified Admin User Creation**
+3. **Step 5.2 - Updated Environment Configuration**
+   - Added `APP_DOMAIN` variable as single source of truth for domain
+   - Removed individual `FRONTEND_URL`, `BACKEND_URL`, `ALLOWED_ORIGINS`, `REDIRECT_URI` configuration
+   - These URLs are now automatically derived from `APP_DOMAIN`
+
+4. **Step 8.2 - Clarified Admin User Creation**
    - Updated description to note that admin panel URL will be displayed after creation
    - Uses dynamic `settings.FRONTEND_URL` from backend config
 
-4. **Step 8.3 - Marked Enterprise Admin as Optional**
+5. **Step 8.3 - Marked Enterprise Admin as Optional**
    - Added note that creating enterprise admin is optional
    - App owner can also manage enterprises from admin panel
 
-5. **Step 10 - Updated Backup Script Instructions**
+6. **Step 10 - Updated Backup Script Instructions**
    - Removed inline backup script creation
    - Now just makes the existing `backup.sh` executable
    - Script is already included in repository
 
-6. **Step 11 - Marked Docker Auto-Restart as Optional**
+7. **Step 11 - Marked Docker Auto-Restart as Optional**
    - Added note explaining it's optional for server reboot
    - Containers already have `restart: always` policy
    - Without systemd, containers won't start on server reboot but will restart if running
 
-7. **Security Checklist - Updated Items**
-   - Added check for `.env.production.local` creation
+8. **Security Checklist - Updated Items**
+   - Added check for `APP_DOMAIN` configuration
+   - Added checks for `.env.production.local` creation
    - Added checks for all required API keys
    - Added check for admin user creation
    - More specific and complete checklist
 
-8. **Step 6.4 - Fixed Backend Health Check**
+9. **Step 6.4 - Fixed Backend Health Check**
    - Changed from `/api/health` endpoint to root endpoint check
    - Added note that 404 response is normal if root path not configured
    - More accurate health verification

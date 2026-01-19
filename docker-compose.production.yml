@@ -30,6 +30,7 @@ services:
     restart: always
     environment:
       DATABASE_URL: postgresql://admin:${POSTGRES_PASSWORD}@db:5432/scanner_prod
+      APP_DOMAIN: ${APP_DOMAIN:-app.card2contacts.com}
     env_file:
       - .env.production
     depends_on:
@@ -48,6 +49,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
+        APP_DOMAIN: ${APP_DOMAIN:-app.card2contacts.com}
         NGINX_CONF: nginx-production.conf
     container_name: scanner_frontend
     restart: always

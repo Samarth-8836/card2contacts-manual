@@ -1,4 +1,13 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request, BackgroundTasks
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+    Request,
+    BackgroundTasks,
+)
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +16,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import uuid
-import httpx 
+import httpx
 import json
 import base64
 import os
@@ -21,14 +30,39 @@ from googleapiclient.errors import HttpError
 from litellm import acompletion, completion
 
 # Allow non-HTTPS for OAuth dev environment
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 # Configuration and OCR imports
 from backend.config import settings
 from backend.ocr import get_ocr_service, initialize_ocr_service
 
-from backend.database import create_db_and_tables, get_session, User, verify_password, get_password_hash, License, EnterpriseAdmin, SubAccount, Distributor, DistributorLicense, DistributorPurchase, OTPRecord, AppOwner, is_license_valid, safe_commit
-from backend.email_utils import send_otp_email, send_password_reset_email, send_account_credentials_email, send_sub_account_otp_email, send_distributor_contact_request_email, generate_otp, generate_random_password, mask_email
+from backend.database import (
+    create_db_and_tables,
+    get_session,
+    User,
+    verify_password,
+    get_password_hash,
+    License,
+    EnterpriseAdmin,
+    SubAccount,
+    Distributor,
+    DistributorLicense,
+    DistributorPurchase,
+    OTPRecord,
+    AppOwner,
+    is_license_valid,
+    safe_commit,
+)
+from backend.email_utils import (
+    send_otp_email,
+    send_password_reset_email,
+    send_account_credentials_email,
+    send_sub_account_otp_email,
+    send_distributor_contact_request_email,
+    generate_otp,
+    generate_random_password,
+    mask_email,
+)
 from sqlmodel import or_
 from backend.google_utils import (
     append_to_sheet,
@@ -56,7 +90,7 @@ from backend.google_utils import (
     append_to_sub_account_sheet,
     export_sheet_as_excel,
     export_combined_contacts,
-    check_granted_scopes
+    check_granted_scopes,
 )
 
 app = FastAPI()
@@ -78,12 +112,12 @@ os.environ["GOOGLE_CLIENT_ID"] = settings.GOOGLE_CLIENT_ID
 os.environ["GOOGLE_CLIENT_SECRET"] = settings.GOOGLE_CLIENT_SECRET
 
 GOOGLE_SCOPES = [
-    'openid',
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/gmail.send'
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/gmail.send",
 ]
 
 # VCard Schema
@@ -98,13 +132,13 @@ VCF_SCHEMA = {
         "url": {"type": "array", "items": {"type": "string"}},
         "adr": {"type": "array", "items": {"type": "string"}},
         "cat": {
-            "type": "array", 
+            "type": "array",
             "items": {"type": "string"},
-            "description": "Specific business category e.g. Plumbing, Legal, Software, Forex Trading"
+            "description": "Specific business category e.g. Plumbing, Legal, Software, Forex Trading",
         },
-        "notes": {"type": ["string", "null"]}
+        "notes": {"type": ["string", "null"]},
     },
-    "required": ["fn"]
+    "required": ["fn"],
 }
 
 # Parse CORS origins from settings (comma-separated string to list)
@@ -117,6 +151,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
@@ -126,14 +161,15 @@ def on_startup():
         "mistral": {
             "api_key": settings.MISTRAL_API_KEY,
             "model": settings.MISTRAL_MODEL,
-            "timeout": settings.MISTRAL_TIMEOUT
+            "timeout": settings.MISTRAL_TIMEOUT,
         },
-        "fallback": {}
+        "fallback": {},
     }
 
     config = provider_configs.get(settings.OCR_PROVIDER, {})
     initialize_ocr_service(settings.OCR_PROVIDER, config)
     print(f"✅ OCR Service Initialized: {settings.OCR_PROVIDER}")
+
 
 # ==========================================
 # 2. DATA MODELS
@@ -142,14 +178,17 @@ class UserLogin(BaseModel):
     email: str  # Can be email (single user) or username (enterprise)
     password: str
 
+
 class UserCreate(BaseModel):
     email: str
     password: str
+
 
 # --- OTP Authentication Models ---
 class LoginInitiateRequest(BaseModel):
     identifier: str  # Email for all user types
     password: str
+
 
 class LoginInitiateResponse(BaseModel):
     status: str  # "otp_sent", "password_change_required", "error"
@@ -158,16 +197,20 @@ class LoginInitiateResponse(BaseModel):
     session_token: str = None  # UUID to track this login attempt
     message: str = None
 
+
 class OTPVerifyRequest(BaseModel):
     session_token: str
     otp_code: str
 
+
 class PasswordResetRequest(BaseModel):
     email: str
+
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
 
 class ContactSave(BaseModel):
     fn: list = []
@@ -180,54 +223,70 @@ class ContactSave(BaseModel):
     cat: list = []  # Added Business Category
     notes: str = ""
 
+
 class TemplateCreate(BaseModel):
     subject: str
     body: str
-    attachments: list[dict] = None  # List of {filename: str, data: str (base64), size: int}, max 20MB total
+    attachments: list[dict] = (
+        None  # List of {filename: str, data: str (base64), size: int}, max 20MB total
+    )
+
 
 class SubAccountCreate(BaseModel):
     email: str  # For sub-accounts, this is treated as username string
     password: str
 
+
 class SubAccountUpdate(BaseModel):
     email: str = None  # For sub-accounts, this is treated as username string
     password: str = None
+
 
 class DistributorPurchaseRequest(BaseModel):
     license_type: str  # "single" or "enterprise"
     count: int
     max_sub_accounts: int = 1  # Only for enterprise licenses
 
+
 class DistributorAccountCreate(BaseModel):
     account_type: str  # "single" or "enterprise"
     email: str  # Required for all users
     password: str = None  # Optional - auto-generated if not provided
-    upgrade_from_email: str = None  # Optional - email of unlicensed account to upgrade/replace
+    upgrade_from_email: str = (
+        None  # Optional - email of unlicensed account to upgrade/replace
+    )
+
 
 class SeatExpansionRequest(BaseModel):
     additional_seats: int  # Number of seats to add to current license
+
 
 class AppOwnerLogin(BaseModel):
     email: str
     password: str
 
+
 class DistributorPromoteRequest(BaseModel):
     email: str
     user_type: str  # "single", "enterprise_admin", or "sub_account"
+
 
 class DistributorRevokeRequest(BaseModel):
     email: str
     user_type: str  # "single", "enterprise_admin", or "sub_account"
 
+
 # ==========================================
 # 3. AUTHENTICATION HELPERS & ENDPOINTS
 # ==========================================
+
 
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
 
 def get_current_user_multi(token: str, db: Session):
     """
@@ -245,7 +304,9 @@ def get_current_user_multi(token: str, db: Session):
     In all cases, this validation ensures only ONE active session per account.
     """
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         identifier = payload.get("sub")  # This is always an email now
         sid = payload.get("sid")
         user_type = payload.get("type", "single")
@@ -254,7 +315,9 @@ def get_current_user_multi(token: str, db: Session):
             raise HTTPException(status_code=401, detail="Invalid token")
 
         if user_type == "enterprise_admin":
-            statement = select(EnterpriseAdmin).where(EnterpriseAdmin.email == identifier)
+            statement = select(EnterpriseAdmin).where(
+                EnterpriseAdmin.email == identifier
+            )
             user = db.exec(statement).first()
         elif user_type == "sub_account":
             statement = select(SubAccount).where(SubAccount.email == identifier)
@@ -273,10 +336,12 @@ def get_current_user_multi(token: str, db: Session):
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
+
 def get_current_user(token: str, db: Session):
     """Backward compatible - returns just the user object (for existing endpoints)."""
     user, user_type = get_current_user_multi(token, db)
     return user
+
 
 def get_current_admin(token: str, db: Session):
     """Get current user, must be enterprise admin."""
@@ -284,6 +349,7 @@ def get_current_admin(token: str, db: Session):
     if user_type != "enterprise_admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
 
 def get_current_distributor(token: str, db: Session):
     """Get current user and verify they have distributor role."""
@@ -293,7 +359,7 @@ def get_current_distributor(token: str, db: Session):
     stmt = select(Distributor).where(
         Distributor.user_id == user.id,
         Distributor.user_type == user_type,
-        Distributor.is_active == True
+        Distributor.is_active == True,
     )
     distributor = db.exec(stmt).first()
 
@@ -302,10 +368,13 @@ def get_current_distributor(token: str, db: Session):
 
     return user, user_type, distributor
 
+
 def get_current_app_owner(token: str, db: Session):
     """Get current app owner and verify authentication."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         email = payload.get("sub")
         sid = payload.get("sid")
         user_type = payload.get("type")
@@ -317,12 +386,19 @@ def get_current_app_owner(token: str, db: Session):
         app_owner = db.exec(statement).first()
 
         # CRITICAL CHECK: Validate session ID matches and account is active
-        if not app_owner or app_owner.current_session_id != sid or not app_owner.is_active:
-            raise HTTPException(status_code=401, detail="Session expired or account inactive")
+        if (
+            not app_owner
+            or app_owner.current_session_id != sid
+            or not app_owner.is_active
+        ):
+            raise HTTPException(
+                status_code=401, detail="Session expired or account inactive"
+            )
 
         return app_owner
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
+
 
 def is_google_connected(user, user_type: str, db: Session) -> bool:
     """
@@ -336,6 +412,7 @@ def is_google_connected(user, user_type: str, db: Session) -> bool:
     else:
         return user.google_connected
 
+
 def get_admin_for_user(user, user_type: str, db: Session):
     """
     Get the admin for a user.
@@ -348,6 +425,7 @@ def get_admin_for_user(user, user_type: str, db: Session):
         return db.exec(admin_stmt).first()
     else:
         return user
+
 
 def get_google_creds_for_user(user, user_type: str, db: Session):
     """
@@ -366,6 +444,7 @@ def get_google_creds_for_user(user, user_type: str, db: Session):
     else:
         return get_google_creds(user, db)
 
+
 def get_spreadsheet_id_for_user(user, user_type: str, db: Session):
     """
     Get Google spreadsheet ID for any user type.
@@ -381,6 +460,7 @@ def get_spreadsheet_id_for_user(user, user_type: str, db: Session):
     else:
         return user.google_spreadsheet_id
 
+
 @app.post("/api/register")
 def register(user_data: UserCreate, db: Session = Depends(get_session)):
     # Check email uniqueness across ALL user types
@@ -390,7 +470,9 @@ def register(user_data: UserCreate, db: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # 2. Check EnterpriseAdmin.email
-    admin_check = select(EnterpriseAdmin).where(EnterpriseAdmin.email == user_data.email)
+    admin_check = select(EnterpriseAdmin).where(
+        EnterpriseAdmin.email == user_data.email
+    )
     if db.exec(admin_check).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -404,15 +486,16 @@ def register(user_data: UserCreate, db: Session = Depends(get_session)):
         password_hash=get_password_hash(user_data.password),
         requires_password_change=False,
         license_id=None,  # Self-registered users don't get a license
-        scan_count=0
+        scan_count=0,
     )
     db.add(new_user)
     db.commit()
     return {
         "message": "Account created successfully",
         "account_type": "unlicensed",
-        "notice": f"You have registered with an unlicensed account. You can scan up to {settings.FREE_TIER_SCAN_LIMIT} business cards. To scan more cards and unlock full features, please contact a distributor to upgrade to a licensed account."
+        "notice": f"You have registered with an unlicensed account. You can scan up to {settings.FREE_TIER_SCAN_LIMIT} business cards. To scan more cards and unlock full features, please contact a distributor to upgrade to a licensed account.",
     }
+
 
 @app.post("/api/check-status")
 def check_user_status(user_data: UserLogin, db: Session = Depends(get_session)):
@@ -454,6 +537,7 @@ def check_user_status(user_data: UserLogin, db: Session = Depends(get_session)):
 
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
+
 @app.post("/api/login")
 def login(user_data: UserLogin, db: Session = Depends(get_session)):
     """
@@ -472,8 +556,14 @@ def login(user_data: UserLogin, db: Session = Depends(get_session)):
         db.add(user)
         db.commit()
         identifier = user.email  # Use email as identifier for JWT
-        access_token = create_access_token(data={"sub": identifier, "sid": session_id, "type": "single"})
-        return {"access_token": access_token, "token_type": "bearer", "user_type": "single"}
+        access_token = create_access_token(
+            data={"sub": identifier, "sid": session_id, "type": "single"}
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_type": "single",
+        }
 
     # Try enterprise admin (by email)
     admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.email == user_data.email)
@@ -482,26 +572,42 @@ def login(user_data: UserLogin, db: Session = Depends(get_session)):
         admin.current_session_id = session_id
         db.add(admin)
         db.commit()
-        access_token = create_access_token(data={"sub": admin.email, "sid": session_id, "type": "enterprise_admin"})
-        return {"access_token": access_token, "token_type": "bearer", "user_type": "enterprise_admin"}
+        access_token = create_access_token(
+            data={"sub": admin.email, "sid": session_id, "type": "enterprise_admin"}
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_type": "enterprise_admin",
+        }
 
     # Try sub-account (by email)
     sub_stmt = select(SubAccount).where(SubAccount.email == user_data.email)
     sub = db.exec(sub_stmt).first()
     if sub and verify_password(user_data.password, sub.password_hash):
         if not sub.is_active:
-            raise HTTPException(status_code=403, detail="Account deactivated by administrator")
+            raise HTTPException(
+                status_code=403, detail="Account deactivated by administrator"
+            )
         sub.current_session_id = session_id
         db.add(sub)
         db.commit()
-        access_token = create_access_token(data={"sub": sub.email, "sid": session_id, "type": "sub_account"})
-        return {"access_token": access_token, "token_type": "bearer", "user_type": "sub_account"}
+        access_token = create_access_token(
+            data={"sub": sub.email, "sid": session_id, "type": "sub_account"}
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_type": "sub_account",
+        }
 
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
 
 # ==========================================
 # APP OWNER LOGIN ENDPOINT
 # ==========================================
+
 
 @app.post("/api/admin/login")
 def app_owner_login(login_data: AppOwnerLogin, db: Session = Depends(get_session)):
@@ -533,18 +639,17 @@ def app_owner_login(login_data: AppOwnerLogin, db: Session = Depends(get_session
     db.commit()
 
     # Create JWT token
-    access_token = create_access_token(data={
-        "sub": app_owner.email,
-        "sid": session_id,
-        "type": "app_owner"
-    })
+    access_token = create_access_token(
+        data={"sub": app_owner.email, "sid": session_id, "type": "app_owner"}
+    )
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_type": "app_owner",
-        "full_name": app_owner.full_name
+        "full_name": app_owner.full_name,
     }
+
 
 # ==========================================
 # OTP-BASED LOGIN FLOW ENDPOINTS
@@ -552,6 +657,7 @@ def app_owner_login(login_data: AppOwnerLogin, db: Session = Depends(get_session
 
 OTP_EXPIRY_MINUTES = 5
 MAX_OTP_ATTEMPTS = 5
+
 
 def _find_user_by_identifier(identifier: str, db: Session):
     """
@@ -581,6 +687,7 @@ def _find_user_by_identifier(identifier: str, db: Session):
 
     return None, None, None
 
+
 @app.post("/api/login/initiate")
 def login_initiate(data: LoginInitiateRequest, db: Session = Depends(get_session)):
     """
@@ -602,7 +709,9 @@ def login_initiate(data: LoginInitiateRequest, db: Session = Depends(get_session
 
     # Check if sub-account is active
     if user_type == "sub_account" and not user.is_active:
-        raise HTTPException(status_code=403, detail="Account deactivated by administrator")
+        raise HTTPException(
+            status_code=403, detail="Account deactivated by administrator"
+        )
 
     # Generate session token for tracking this login attempt
     session_token = str(uuid.uuid4())
@@ -610,9 +719,14 @@ def login_initiate(data: LoginInitiateRequest, db: Session = Depends(get_session
     # Check if email is available for OTP
     if not email_for_otp:
         if user_type == "sub_account":
-            raise HTTPException(status_code=400, detail="Admin's email not configured. Contact your administrator.")
+            raise HTTPException(
+                status_code=400,
+                detail="Admin's email not configured. Contact your administrator.",
+            )
         else:
-            raise HTTPException(status_code=400, detail="Email not configured for OTP delivery")
+            raise HTTPException(
+                status_code=400, detail="Email not configured for OTP delivery"
+            )
 
     # Generate and send OTP
     otp_code = generate_otp()
@@ -625,7 +739,7 @@ def login_initiate(data: LoginInitiateRequest, db: Session = Depends(get_session
         otp_code=otp_code,
         created_at=datetime.utcnow(),
         expires_at=datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES),
-        pending_session_id=session_token
+        pending_session_id=session_token,
     )
     db.add(otp_record)
     db.commit()
@@ -638,7 +752,7 @@ def login_initiate(data: LoginInitiateRequest, db: Session = Depends(get_session
         send_otp_email(email_for_otp, otp_code)
 
     # Check if password change is required (for distributor-created accounts)
-    requires_password_change = getattr(user, 'requires_password_change', False)
+    requires_password_change = getattr(user, "requires_password_change", False)
 
     return {
         "status": "otp_sent",
@@ -646,8 +760,9 @@ def login_initiate(data: LoginInitiateRequest, db: Session = Depends(get_session
         "otp_sent_to": mask_email(email_for_otp),
         "session_token": session_token,
         "requires_password_change": requires_password_change,
-        "message": f"Verification code sent to {mask_email(email_for_otp)}"
+        "message": f"Verification code sent to {mask_email(email_for_otp)}",
     }
+
 
 @app.post("/api/login/verify-otp")
 def login_verify_otp(data: OTPVerifyRequest, db: Session = Depends(get_session)):
@@ -656,8 +771,7 @@ def login_verify_otp(data: OTPVerifyRequest, db: Session = Depends(get_session))
     """
     # Find OTP record
     otp_stmt = select(OTPRecord).where(
-        OTPRecord.pending_session_id == data.session_token,
-        OTPRecord.is_used == False
+        OTPRecord.pending_session_id == data.session_token, OTPRecord.is_used == False
     )
     otp_record = db.exec(otp_stmt).first()
 
@@ -666,14 +780,18 @@ def login_verify_otp(data: OTPVerifyRequest, db: Session = Depends(get_session))
 
     # Check if OTP is expired
     if datetime.utcnow() > otp_record.expires_at:
-        raise HTTPException(status_code=400, detail="Verification code expired. Please try again.")
+        raise HTTPException(
+            status_code=400, detail="Verification code expired. Please try again."
+        )
 
     # Check attempts
     if otp_record.attempts >= MAX_OTP_ATTEMPTS:
         otp_record.is_used = True
         db.add(otp_record)
         db.commit()
-        raise HTTPException(status_code=400, detail="Too many attempts. Please try again.")
+        raise HTTPException(
+            status_code=400, detail="Too many attempts. Please try again."
+        )
 
     # Verify OTP code
     if otp_record.otp_code != data.otp_code:
@@ -681,7 +799,9 @@ def login_verify_otp(data: OTPVerifyRequest, db: Session = Depends(get_session))
         db.add(otp_record)
         db.commit()
         remaining = MAX_OTP_ATTEMPTS - otp_record.attempts
-        raise HTTPException(status_code=400, detail=f"Invalid code. {remaining} attempts remaining.")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid code. {remaining} attempts remaining."
+        )
 
     # Find the user first (before modifying OTP record)
     user, user_type, _ = _find_user_by_identifier(otp_record.identifier, db)
@@ -705,17 +825,20 @@ def login_verify_otp(data: OTPVerifyRequest, db: Session = Depends(get_session))
     identifier = user.email
 
     # Check if password change is required
-    requires_password_change = getattr(user, 'requires_password_change', False)
+    requires_password_change = getattr(user, "requires_password_change", False)
 
-    access_token = create_access_token(data={"sub": identifier, "sid": session_id, "type": user_type})
+    access_token = create_access_token(
+        data={"sub": identifier, "sid": session_id, "type": user_type}
+    )
 
     return {
         "status": "success",
         "access_token": access_token,
         "token_type": "bearer",
         "user_type": user_type,
-        "requires_password_change": requires_password_change
+        "requires_password_change": requires_password_change,
     }
+
 
 @app.post("/api/login/resend-otp")
 def login_resend_otp(session_token: str, db: Session = Depends(get_session)):
@@ -724,8 +847,7 @@ def login_resend_otp(session_token: str, db: Session = Depends(get_session)):
     """
     # Find the pending OTP record
     otp_stmt = select(OTPRecord).where(
-        OTPRecord.pending_session_id == session_token,
-        OTPRecord.is_used == False
+        OTPRecord.pending_session_id == session_token, OTPRecord.is_used == False
     )
     otp_record = db.exec(otp_stmt).first()
 
@@ -734,12 +856,16 @@ def login_resend_otp(session_token: str, db: Session = Depends(get_session)):
 
     # Check if it's a migration/setup record
     if otp_record.otp_code in ["MIGRATION", "EMAIL_SETUP"]:
-        raise HTTPException(status_code=400, detail="Complete setup first before requesting OTP")
+        raise HTTPException(
+            status_code=400, detail="Complete setup first before requesting OTP"
+        )
 
     # Find user and email
     user, user_type, email_for_otp = _find_user_by_identifier(otp_record.identifier, db)
     if not user or not email_for_otp:
-        raise HTTPException(status_code=400, detail="Could not find email for OTP delivery")
+        raise HTTPException(
+            status_code=400, detail="Could not find email for OTP delivery"
+        )
 
     # Generate new OTP
     new_otp_code = generate_otp()
@@ -761,15 +887,19 @@ def login_resend_otp(session_token: str, db: Session = Depends(get_session)):
     return {
         "status": "otp_sent",
         "otp_sent_to": mask_email(email_for_otp),
-        "message": f"New verification code sent to {mask_email(email_for_otp)}"
+        "message": f"New verification code sent to {mask_email(email_for_otp)}",
     }
+
 
 # ==========================================
 # PASSWORD MANAGEMENT ENDPOINTS
 # ==========================================
 
+
 @app.post("/api/password/reset-request")
-def password_reset_request(data: PasswordResetRequest, db: Session = Depends(get_session)):
+def password_reset_request(
+    data: PasswordResetRequest, db: Session = Depends(get_session)
+):
     """
     Request password reset. Sends new password to email.
     Only available for single users and enterprise admins (not sub-accounts).
@@ -786,14 +916,19 @@ def password_reset_request(data: PasswordResetRequest, db: Session = Depends(get
 
     # Check enterprise admins
     if not user:
-        admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.admin_email == data.email)
+        admin_stmt = select(EnterpriseAdmin).where(
+            EnterpriseAdmin.admin_email == data.email
+        )
         user = db.exec(admin_stmt).first()
         if user:
             user_type = "enterprise_admin"
 
     # Always return success to prevent email enumeration
     if not user:
-        return {"status": "success", "message": "If this email is registered, a new password has been sent."}
+        return {
+            "status": "success",
+            "message": "If this email is registered, a new password has been sent.",
+        }
 
     # Generate new random password
     new_password = generate_random_password(12)
@@ -809,10 +944,16 @@ def password_reset_request(data: PasswordResetRequest, db: Session = Depends(get
     # Send email with new password
     send_password_reset_email(data.email, new_password)
 
-    return {"status": "success", "message": "If this email is registered, a new password has been sent."}
+    return {
+        "status": "success",
+        "message": "If this email is registered, a new password has been sent.",
+    }
+
 
 @app.post("/api/user/change-password")
-def change_password(data: ChangePasswordRequest, token: str, db: Session = Depends(get_session)):
+def change_password(
+    data: ChangePasswordRequest, token: str, db: Session = Depends(get_session)
+):
     """
     Change password for authenticated user.
     """
@@ -824,7 +965,9 @@ def change_password(data: ChangePasswordRequest, token: str, db: Session = Depen
 
     # Validate new password (minimum 6 characters)
     if len(data.new_password) < 6:
-        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+        raise HTTPException(
+            status_code=400, detail="New password must be at least 6 characters"
+        )
 
     # Update password
     user.password_hash = get_password_hash(data.new_password)
@@ -836,7 +979,11 @@ def change_password(data: ChangePasswordRequest, token: str, db: Session = Depen
     db.add(user)
     db.commit()
 
-    return {"status": "success", "message": "Password changed successfully. Please login again."}
+    return {
+        "status": "success",
+        "message": "Password changed successfully. Please login again.",
+    }
+
 
 @app.get("/api/me")
 def get_user_info(token: str, db: Session = Depends(get_session)):
@@ -846,7 +993,7 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
     dist_stmt = select(Distributor).where(
         Distributor.user_id == user.id,
         Distributor.user_type == user_type,
-        Distributor.is_active == True
+        Distributor.is_active == True,
     )
     is_distributor = db.exec(dist_stmt).first() is not None
 
@@ -868,7 +1015,9 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
                     license_expires_at = user_license.created_at + timedelta(days=365)
                 else:
                     license_status = "expired"
-                    scans_remaining = max(0, settings.FREE_TIER_SCAN_LIMIT - user.scan_count)
+                    scans_remaining = max(
+                        0, settings.FREE_TIER_SCAN_LIMIT - user.scan_count
+                    )
                     license_expires_at = user_license.created_at + timedelta(days=365)
         else:
             # No license - show remaining free scans
@@ -882,14 +1031,17 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
             "status": "active",
             "user_type": "single",
             "google_linked": user.google_connected,  # Has tokens (linked at some point)
-            "google_connected": user.google_connected and scope_info["has_all_scopes"],  # Has all required scopes
+            "google_connected": user.google_connected
+            and scope_info["has_all_scopes"],  # Has all required scopes
             "google_missing_scopes": scope_info["missing_scopes"],
             "is_distributor": is_distributor,
             "requires_password_change": user.requires_password_change,
             "license_status": license_status,
             "scans_remaining": scans_remaining,
             "scan_count": user.scan_count,
-            "license_expires_at": license_expires_at.isoformat() if license_expires_at else None
+            "license_expires_at": license_expires_at.isoformat()
+            if license_expires_at
+            else None,
         }
     elif user_type == "enterprise_admin":
         # Check license status for enterprise admin
@@ -917,12 +1069,15 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
             "status": "active",
             "user_type": "enterprise_admin",
             "google_linked": user.google_connected,  # Has tokens (linked at some point)
-            "google_connected": user.google_connected and scope_info["has_all_scopes"],  # Has all required scopes
+            "google_connected": user.google_connected
+            and scope_info["has_all_scopes"],  # Has all required scopes
             "google_missing_scopes": scope_info["missing_scopes"],
             "is_distributor": is_distributor,
             "requires_password_change": user.requires_password_change,
             "license_status": license_status,
-            "license_expires_at": license_expires_at.isoformat() if license_expires_at else None
+            "license_expires_at": license_expires_at.isoformat()
+            if license_expires_at
+            else None,
         }
     else:  # sub_account
         # Sub-accounts inherit Google connection from their admin
@@ -930,7 +1085,10 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
         admin = db.exec(admin_stmt).first()
 
         # Check admin's granted scopes
-        scope_info = {"has_all_scopes": False, "missing_scopes": ["Drive Access", "Gmail Access"]}
+        scope_info = {
+            "has_all_scopes": False,
+            "missing_scopes": ["Drive Access", "Gmail Access"],
+        }
         admin_linked = False
         if admin:
             scope_info = check_granted_scopes(admin, db)
@@ -941,11 +1099,14 @@ def get_user_info(token: str, db: Session = Depends(get_session)):
             "status": "active",
             "user_type": "sub_account",
             "google_linked": admin_linked,  # Admin has tokens (linked at some point)
-            "google_connected": admin_linked and scope_info["has_all_scopes"],  # Admin has all required scopes
+            "google_connected": admin_linked
+            and scope_info["has_all_scopes"],  # Admin has all required scopes
             "google_missing_scopes": scope_info["missing_scopes"],
-            "email_feature_enabled": user.assigned_template_id is not None,  # Email enabled if template assigned
-            "is_distributor": is_distributor
+            "email_feature_enabled": user.assigned_template_id
+            is not None,  # Email enabled if template assigned
+            "is_distributor": is_distributor,
         }
+
 
 @app.post("/api/logout")
 def logout(token: str, db: Session = Depends(get_session)):
@@ -954,8 +1115,10 @@ def logout(token: str, db: Session = Depends(get_session)):
         user.current_session_id = None
         db.add(user)
         db.commit()
-    except: pass
+    except:
+        pass
     return {"message": "Logged out"}
+
 
 @app.post("/api/user/request-upgrade")
 def request_account_upgrade(token: str, db: Session = Depends(get_session)):
@@ -966,14 +1129,18 @@ def request_account_upgrade(token: str, db: Session = Depends(get_session)):
     user, user_type = get_current_user_multi(token, db)
 
     if user_type != "single":
-        raise HTTPException(status_code=400, detail="Only single users can request upgrades")
+        raise HTTPException(
+            status_code=400, detail="Only single users can request upgrades"
+        )
 
     # Check if user already has a valid license
     if user.license_id:
         license_stmt = select(License).where(License.id == user.license_id)
         user_license = db.exec(license_stmt).first()
         if is_license_valid(user_license):
-            raise HTTPException(status_code=400, detail="You already have a valid license")
+            raise HTTPException(
+                status_code=400, detail="You already have a valid license"
+            )
 
     return {
         "status": "upgrade_requested",
@@ -982,14 +1149,15 @@ def request_account_upgrade(token: str, db: Session = Depends(get_session)):
             "Contact a distributor to request a license upgrade",
             "The distributor will ask if you need a single-user or enterprise license",
             "Your current unlicensed account will be replaced with a new licensed account",
-            "All your data will be transferred to the new account"
+            "All your data will be transferred to the new account",
         ],
         "current_account": {
             "email": user.email,
             "username": user.username,
-            "scans_used": user.scan_count
-        }
+            "scans_used": user.scan_count,
+        },
     }
+
 
 @app.post("/api/user/contact-distributor")
 def contact_distributor_network(token: str, db: Session = Depends(get_session)):
@@ -999,22 +1167,29 @@ def contact_distributor_network(token: str, db: Session = Depends(get_session)):
     user, user_type = get_current_user_multi(token, db)
 
     if user_type != "single":
-        raise HTTPException(status_code=400, detail="Only single users can request distributor contact")
+        raise HTTPException(
+            status_code=400, detail="Only single users can request distributor contact"
+        )
 
     # Send email notification to distributor network
     email_sent = send_distributor_contact_request_email(user.email, user.username)
 
     if not email_sent:
-        raise HTTPException(status_code=500, detail="Failed to send contact request. Please try again later.")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send contact request. Please try again later.",
+        )
 
     return {
         "status": "success",
-        "message": "Your contact request has been sent to our distributor network. You will be contacted shortly to discuss your license requirements."
+        "message": "Your contact request has been sent to our distributor network. You will be contacted shortly to discuss your license requirements.",
     }
+
 
 # ==========================================
 # 4. GOOGLE OAUTH ENDPOINTS
 # ==========================================
+
 
 @app.get("/api/auth/google/login")
 def login_with_google():
@@ -1026,9 +1201,17 @@ def login_with_google():
             "token_uri": "https://oauth2.googleapis.com/token",
         }
     }
-    flow = Flow.from_client_config(client_config, scopes=GOOGLE_SCOPES, redirect_uri=settings.REDIRECT_URI)
-    auth_url, _ = flow.authorization_url(access_type='offline', include_granted_scopes='true', state="login_flow", prompt='consent')
+    flow = Flow.from_client_config(
+        client_config, scopes=GOOGLE_SCOPES, redirect_uri=settings.REDIRECT_URI
+    )
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        state="login_flow",
+        prompt="consent",
+    )
     return {"auth_url": auth_url}
+
 
 @app.get("/api/auth/google/link")
 def link_google_account(token: str, db: Session = Depends(get_session)):
@@ -1036,7 +1219,10 @@ def link_google_account(token: str, db: Session = Depends(get_session)):
 
     # Sub-accounts cannot link Google - only their admin can
     if user_type == "sub_account":
-        raise HTTPException(status_code=403, detail="Sub-accounts cannot link Google. Contact your administrator.")
+        raise HTTPException(
+            status_code=403,
+            detail="Sub-accounts cannot link Google. Contact your administrator.",
+        )
 
     client_config = {
         "web": {
@@ -1046,9 +1232,17 @@ def link_google_account(token: str, db: Session = Depends(get_session)):
             "token_uri": "https://oauth2.googleapis.com/token",
         }
     }
-    flow = Flow.from_client_config(client_config, scopes=GOOGLE_SCOPES, redirect_uri=settings.REDIRECT_URI)
-    auth_url, _ = flow.authorization_url(access_type='offline', include_granted_scopes='true', state=token, prompt='consent')
+    flow = Flow.from_client_config(
+        client_config, scopes=GOOGLE_SCOPES, redirect_uri=settings.REDIRECT_URI
+    )
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        state=token,
+        prompt="consent",
+    )
     return {"auth_url": auth_url}
+
 
 @app.get("/api/auth/google/callback")
 def google_callback(state: str, code: str, db: Session = Depends(get_session)):
@@ -1077,20 +1271,26 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
                 "token_uri": "https://oauth2.googleapis.com/token",
             }
         }
-        flow = Flow.from_client_config(client_config, scopes=GOOGLE_SCOPES, redirect_uri=settings.REDIRECT_URI)
+        flow = Flow.from_client_config(
+            client_config, scopes=GOOGLE_SCOPES, redirect_uri=settings.REDIRECT_URI
+        )
         flow.fetch_token(code=code)
         creds = flow.credentials
         user = None
 
         # Validate that ALL required scopes are granted
-        granted_scopes = set(creds.scopes) if hasattr(creds, 'scopes') and creds.scopes else set()
+        granted_scopes = (
+            set(creds.scopes) if hasattr(creds, "scopes") and creds.scopes else set()
+        )
         required_scopes = set(GOOGLE_SCOPES)
         missing_scopes = required_scopes - granted_scopes
 
         if missing_scopes:
             # User denied some permissions - redirect with error
             print(f"Incomplete permissions granted. Missing scopes: {missing_scopes}")
-            return RedirectResponse(url=f"/?error=incomplete_permissions&missing={','.join(missing_scopes)}")
+            return RedirectResponse(
+                url=f"/?error=incomplete_permissions&missing={','.join(missing_scopes)}"
+            )
 
         # Track if this is the first time linking Google account
         # (to show notification only once, not on every re-auth/refresh)
@@ -1098,9 +1298,9 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
 
         if state == "login_flow":
             # New Google sign-up: must have all permissions granted upfront
-            user_info_service = build('oauth2', 'v2', credentials=creds)
+            user_info_service = build("oauth2", "v2", credentials=creds)
             user_info = user_info_service.userinfo().get().execute()
-            email = user_info.get('email')
+            email = user_info.get("email")
 
             statement = select(User).where(User.email == email)
             user = db.exec(statement).first()
@@ -1110,7 +1310,7 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
                 user = User(
                     email=email,
                     password_hash="GOOGLE_LINKED_ACCOUNT",
-                    google_connected=True  # Auto-link since signed up with Google
+                    google_connected=True,  # Auto-link since signed up with Google
                 )
                 db.add(user)
                 if not safe_commit(db):
@@ -1138,9 +1338,12 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
         if not user.google_spreadsheet_id:
             try:
                 from backend.google_utils import create_spreadsheet_in_folder
+
                 ssid = create_spreadsheet_in_folder(creds)
-                if ssid: user.google_spreadsheet_id = ssid
-            except: pass
+                if ssid:
+                    user.google_spreadsheet_id = ssid
+            except:
+                pass
 
         # If this is an enterprise admin, create sheets for all existing sub-accounts
         if user_type == "enterprise_admin":
@@ -1161,8 +1364,10 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
             raise HTTPException(status_code=500, detail="Failed to update session")
 
         # Get correct identifier based on user type
-        identifier = getattr(user, 'email', None) or getattr(user, 'username')
-        app_token = create_access_token(data={"sub": identifier, "sid": session_id, "type": user_type})
+        identifier = getattr(user, "email", None) or getattr(user, "username")
+        app_token = create_access_token(
+            data={"sub": identifier, "sid": session_id, "type": user_type}
+        )
 
         # Only show "Google account linked" notification on first-time linking
         if is_first_time_linking:
@@ -1172,6 +1377,7 @@ def google_callback(state: str, code: str, db: Session = Depends(get_session)):
 
     except Exception as e:
         return {"error": f"Google Auth Failed: {str(e)}"}
+
 
 @app.get("/api/auth/google/verify")
 def verify_google_status(token: str, db: Session = Depends(get_session)):
@@ -1191,12 +1397,14 @@ def verify_google_status(token: str, db: Session = Depends(get_session)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ==========================================
 # 5. CORE PROCESSING LOGIC
 # ==========================================
 
+
 async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"[AI PROCESSING ASYNC] Starting AI processing")
     print(f"[AI PROCESSING ASYNC] Image size: {len(image_bytes)} bytes")
     print(f"[AI PROCESSING ASYNC] OCR text length: {len(raw_text)} chars")
@@ -1206,13 +1414,16 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
     # Check if the model supports vision (multimodal)
     # Vision models: gemini/, gpt-4-vision, claude-3, etc.
     # Text-only models: groq/, gpt-3.5, etc.
-    is_vision_model = any(prefix in settings.LLM_MODEL.lower() for prefix in ['gemini/', 'gpt-4-vision', 'claude-3'])
+    is_vision_model = any(
+        prefix in settings.LLM_MODEL.lower()
+        for prefix in ["gemini/", "gpt-4-vision", "claude-3"]
+    )
     print(f"[AI PROCESSING ASYNC] Is vision model: {is_vision_model}")
 
     if is_vision_model:
         # Use multimodal approach (image + text)
         print(f"[AI PROCESSING ASYNC] Using VISION model approach (image + text)")
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
         system_prompt = f"""
         You are an expert data extraction AI.
         Extract contact details into this valid JSON object matching this schema exactly:
@@ -1226,8 +1437,11 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
                 "role": "user",
                 "content": [
                     {"type": "text", "text": system_prompt},
-                    {"type": "image_url", "image_url": { "url": f"data:image/jpeg;base64,{base64_image}" }}
-                ]
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    },
+                ],
             }
         ]
     else:
@@ -1243,12 +1457,7 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
         Business Card Text:
         {raw_text}
         """
-        messages = [
-            {
-                "role": "user",
-                "content": system_prompt
-            }
-        ]
+        messages = [{"role": "user", "content": system_prompt}]
 
     try:
         print(f"[AI PROCESSING ASYNC] Sending request to AI model...")
@@ -1260,7 +1469,7 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
             api_params = {
                 "model": model_name,
                 "messages": messages,
-                "response_format": {"type": "json_object"}
+                "response_format": {"type": "json_object"},
             }
         else:
             # Force Groq provider for all other models
@@ -1277,7 +1486,7 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
                 "model": model_name,
                 "messages": messages,
                 "response_format": {"type": "json_object"},
-                "custom_llm_provider": "groq"
+                "custom_llm_provider": "groq",
             }
 
         response = await acompletion(**api_params)
@@ -1303,39 +1512,57 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
             result = data
 
         print(f"[AI PROCESSING ASYNC] ✅ Final result: {result}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
         return result
     except Exception as e:
         print(f"[AI PROCESSING ASYNC] ❌ Error: {type(e).__name__}: {e}")
         import traceback
+
         print(f"[AI PROCESSING ASYNC] Traceback: {traceback.format_exc()}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
         return {}
 
+
 def sync_process_image_logic(image_bytes: bytes) -> dict:
+    print(f"\n{'=' * 60}")
+    print(f"[AI PROCESSING SYNC] Starting AI processing")
+    print(f"[AI PROCESSING SYNC] Image size: {len(image_bytes)} bytes")
+    print(f"[AI PROCESSING SYNC] Using model: {settings.LLM_MODEL}")
+
     # Extract OCR text using abstraction layer
     ocr_service = get_ocr_service()
     ocr_result = ocr_service.extract_sync(image_bytes)
     raw_text = ocr_result.full_text
+    print(f"[AI PROCESSING SYNC] OCR text length: {len(raw_text)} chars")
+    print(f"[AI PROCESSING SYNC] OCR text preview: {raw_text[:200]}...")
 
     # Check if the model supports vision (multimodal)
-    is_vision_model = any(prefix in settings.LLM_MODEL.lower() for prefix in ['gemini/', 'gpt-4-vision', 'claude-3'])
+    is_vision_model = any(
+        prefix in settings.LLM_MODEL.lower()
+        for prefix in ["gemini/", "gpt-4-vision", "claude-3"]
+    )
+    print(f"[AI PROCESSING SYNC] Is vision model: {is_vision_model}")
 
     if is_vision_model:
         # Use multimodal approach (image + text)
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        print(f"[AI PROCESSING SYNC] Using VISION model approach (image + text)")
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
         system_prompt = f"Extract JSON Schema: {json.dumps(VCF_SCHEMA)}\nAnalyze Business Category (e.g. Plumbing, Legal) into 'cat' field.\nOCR: {raw_text}"
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": system_prompt},
-                    {"type": "image_url", "image_url": { "url": f"data:image/jpeg;base64,{base64_image}" }}
-                ]
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    },
+                ],
             }
         ]
     else:
         # Use text-only approach (OCR text only)
+        print(f"[AI PROCESSING SYNC] Using TEXT-ONLY model approach (OCR text only)")
         system_prompt = f"""Extract contact details from the following business card text into this valid JSON object matching this schema exactly:
 {json.dumps(VCF_SCHEMA)}
 
@@ -1344,36 +1571,92 @@ CRITICAL: Analyze the business nature (e.g. Plumbing, IT Services, Legal, Forex 
 Business Card Text:
 {raw_text}
 """
-        messages = [
-            {
-                "role": "user",
-                "content": system_prompt
-            }
-        ]
+        messages = [{"role": "user", "content": system_prompt}]
 
     try:
-        response = completion(model=settings.LLM_MODEL, messages=messages, response_format={ "type": "json_object" })
+        print(f"[AI PROCESSING SYNC] Sending request to AI model...")
+
+        # Determine the provider and model name - same logic as async version
+        if settings.LLM_MODEL.startswith("gemini/"):
+            # Let LiteLLM handle Gemini routing automatically
+            model_name = settings.LLM_MODEL
+            api_params = {
+                "model": model_name,
+                "messages": messages,
+                "response_format": {"type": "json_object"},
+            }
+        else:
+            # Force Groq provider for all other models
+            # Preserve the full model name and just ensure groq/ prefix
+            if settings.LLM_MODEL.startswith("groq/"):
+                model_name = settings.LLM_MODEL
+            else:
+                # Prepend groq/ to the model name (preserves any existing prefixes like openai/gpt-oss-20b)
+                model_name = f"groq/{settings.LLM_MODEL}"
+
+            print(f"[AI PROCESSING SYNC] Using Groq provider with model: {model_name}")
+
+            api_params = {
+                "model": model_name,
+                "messages": messages,
+                "response_format": {"type": "json_object"},
+                "custom_llm_provider": "groq",
+            }
+
+        response = completion(**api_params)
+        print(f"[AI PROCESSING SYNC] ✅ Received response from AI")
+
         content = response.choices[0].message.content
-        if content.startswith("```json"): content = content.replace("```json", "").replace("```", "")
+        print(f"[AI PROCESSING SYNC] Response content length: {len(content)} chars")
+        print(f"[AI PROCESSING SYNC] Response preview: {content[:500]}...")
+
+        if content.startswith("```json"):
+            content = content.replace("```json", "").replace("```", "")
+            print(f"[AI PROCESSING SYNC] Removed markdown JSON formatting")
+
         data = json.loads(content)
-        if isinstance(data, list): return data[0] if len(data) > 0 else {}
-        return data
-    except: return {}
+        print(f"[AI PROCESSING SYNC] ✅ Successfully parsed JSON")
+        print(f"[AI PROCESSING SYNC] Extracted data keys: {list(data.keys())}")
+        print(f"[AI PROCESSING SYNC] Full extracted data: {data}")
+
+        if isinstance(data, list):
+            result = data[0] if len(data) > 0 else {}
+            print(f"[AI PROCESSING SYNC] Data was list, returning first element")
+        else:
+            result = data
+
+        print(f"[AI PROCESSING SYNC] ✅ Final result: {result}")
+        print(f"{'=' * 60}\n")
+        return result
+    except Exception as e:
+        print(f"[AI PROCESSING SYNC] ❌ Error: {type(e).__name__}: {e}")
+        import traceback
+
+        print(f"[AI PROCESSING SYNC] Traceback: {traceback.format_exc()}")
+        print(f"{'=' * 60}\n")
+        return {}
+
 
 # --- EMAIL LOGIC ---
 def normalize_emails(email_input) -> list:
     import re
-    if not email_input: return []
-    if isinstance(email_input, str): email_input = [email_input]
+
+    if not email_input:
+        return []
+    if isinstance(email_input, str):
+        email_input = [email_input]
     valid_emails = []
     email_regex = r"[^@\s]+@[^@\s]+\.[^@\s]+"
     for item in email_input:
-        if not item: continue
-        parts = re.split(r'[;,\s\n]+', str(item))
+        if not item:
+            continue
+        parts = re.split(r"[;,\s\n]+", str(item))
         for part in parts:
             part = part.strip().strip(".'\"")
-            if part and re.match(email_regex, part): valid_emails.append(part)
+            if part and re.match(email_regex, part):
+                valid_emails.append(part)
     return list(set(valid_emails))
+
 
 def replace_template_variables(text: str, contact_data: dict) -> str:
     """
@@ -1400,131 +1683,149 @@ def replace_template_variables(text: str, contact_data: dict) -> str:
     import re
 
     # Extract contact data with defaults
-    full_name = contact_data.get('fn', [''])[0] if contact_data.get('fn') else ''
-    name_parts = full_name.split(' ', 1) if full_name else ['', '']
-    first_name = name_parts[0] if name_parts else ''
-    last_name = name_parts[1] if len(name_parts) > 1 else ''
+    full_name = contact_data.get("fn", [""])[0] if contact_data.get("fn") else ""
+    name_parts = full_name.split(" ", 1) if full_name else ["", ""]
+    first_name = name_parts[0] if name_parts else ""
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
 
-    company = contact_data.get('org', '') or ''
-    email = contact_data.get('email', [''])[0] if contact_data.get('email') else ''
-    phone = contact_data.get('tel', [''])[0] if contact_data.get('tel') else ''
-    address = contact_data.get('adr', [''])[0] if contact_data.get('adr') else ''
-    website = contact_data.get('url', [''])[0] if contact_data.get('url') else ''
-    category = contact_data.get('cat', [''])[0] if contact_data.get('cat') else ''
-    notes = contact_data.get('notes', '') or ''
-    job_title = contact_data.get('title', '') or ''
+    company = contact_data.get("org", "") or ""
+    email = contact_data.get("email", [""])[0] if contact_data.get("email") else ""
+    phone = contact_data.get("tel", [""])[0] if contact_data.get("tel") else ""
+    address = contact_data.get("adr", [""])[0] if contact_data.get("adr") else ""
+    website = contact_data.get("url", [""])[0] if contact_data.get("url") else ""
+    category = contact_data.get("cat", [""])[0] if contact_data.get("cat") else ""
+    notes = contact_data.get("notes", "") or ""
+    job_title = contact_data.get("title", "") or ""
 
     # Define variable mappings
     replacements = {
-        'name': full_name,
-        'full_name': full_name,
-        'first_name': first_name,
-        'last_name': last_name,
-        'company': company,
-        'organization': company,
-        'org': company,
-        'email': email,
-        'phone': phone,
-        'tel': phone,
-        'address': address,
-        'adr': address,
-        'website': website,
-        'url': website,
-        'category': category,
-        'notes': notes,
-        'title': job_title,
-        'job_title': job_title
+        "name": full_name,
+        "full_name": full_name,
+        "first_name": first_name,
+        "last_name": last_name,
+        "company": company,
+        "organization": company,
+        "org": company,
+        "email": email,
+        "phone": phone,
+        "tel": phone,
+        "address": address,
+        "adr": address,
+        "website": website,
+        "url": website,
+        "category": category,
+        "notes": notes,
+        "title": job_title,
+        "job_title": job_title,
     }
 
     result = text
 
     # Process conditional blocks first: {{% if variable %}}content{{% endif %}}
-    conditional_pattern = r'\{\{%\s*if\s+(\w+)\s*%\}\}(.*?)\{\{%\s*endif\s*%\}\}'
+    conditional_pattern = r"\{\{%\s*if\s+(\w+)\s*%\}\}(.*?)\{\{%\s*endif\s*%\}\}"
 
     def replace_conditional(match):
         var_name = match.group(1).lower()
         content = match.group(2)
         # Check if variable has value
-        var_value = replacements.get(var_name, '')
+        var_value = replacements.get(var_name, "")
         if var_value and var_value.strip():
             return content  # Keep content if variable has value
         else:
-            return ''  # Remove entire block if variable is empty
+            return ""  # Remove entire block if variable is empty
 
-    result = re.sub(conditional_pattern, replace_conditional, result, flags=re.IGNORECASE | re.DOTALL)
+    result = re.sub(
+        conditional_pattern,
+        replace_conditional,
+        result,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
 
     # Replace all {{ variable }} patterns
     for var_name, var_value in replacements.items():
         # Match {{ var_name }} with optional whitespace
-        pattern = r'\{\{\s*' + var_name + r'\s*\}\}'
-        result = re.sub(pattern, var_value or '', result, flags=re.IGNORECASE)
+        pattern = r"\{\{\s*" + var_name + r"\s*\}\}"
+        result = re.sub(pattern, var_value or "", result, flags=re.IGNORECASE)
 
     return result
 
-async def process_and_send_email(user_email: str, contact_data: dict, db_session: Session):
+
+async def process_and_send_email(
+    user_email: str, contact_data: dict, db_session: Session
+):
     """
     Process and send email using programmatic variable replacement.
     Variables in the template are replaced with actual contact data.
     """
     statement = select(User).where(User.email == user_email)
     user = db_session.exec(statement).first()
-    if not user or not user.email_feature_enabled: return
-    emails = normalize_emails(contact_data.get('email', []))
-    if not emails: return
+    if not user or not user.email_feature_enabled:
+        return
+    emails = normalize_emails(contact_data.get("email", []))
+    if not emails:
+        return
 
     try:
         templates = fetch_templates(user, db_session)
-        active_tpl = next((t for t in templates if t['active'] == 'TRUE'), None)
-        if not active_tpl: return
+        active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
+        if not active_tpl:
+            return
 
         # Programmatically replace variables in subject and body
-        subject = replace_template_variables(active_tpl['subject'], contact_data)
-        body = replace_template_variables(active_tpl['body'], contact_data)
+        subject = replace_template_variables(active_tpl["subject"], contact_data)
+        body = replace_template_variables(active_tpl["body"], contact_data)
 
         # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace('\n', '<br>')
+        body_html = body.replace("\n", "<br>")
 
         # Parse and resolve attachments if present
         attachments = None
-        if active_tpl.get('attachment'):
+        if active_tpl.get("attachment"):
             try:
-                attachment_refs = json.loads(active_tpl['attachment'])
-                attachments = get_template_attachments(user, db_session, attachment_refs)
+                attachment_refs = json.loads(active_tpl["attachment"])
+                attachments = get_template_attachments(
+                    user, db_session, attachment_refs
+                )
             except:
                 pass
 
         # Send emails
         for email_addr in emails:
             try:
-                send_gmail(user, db_session, email_addr, subject, body_html, attachments)
+                send_gmail(
+                    user, db_session, email_addr, subject, body_html, attachments
+                )
             except:
                 pass
     except:
         pass
 
+
 def sync_email_generation_and_send(user: User, db: Session, contact_data: dict):
     """
     Synchronous version of email sending with programmatic variable replacement.
     """
-    emails = normalize_emails(contact_data.get('email', []))
-    if not emails: return
+    emails = normalize_emails(contact_data.get("email", []))
+    if not emails:
+        return
     try:
         templates = fetch_templates(user, db)
-        active_tpl = next((t for t in templates if t['active'] == 'TRUE'), None)
-        if not active_tpl: return
+        active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
+        if not active_tpl:
+            return
 
         # Programmatically replace variables
-        subject = replace_template_variables(active_tpl['subject'], contact_data)
-        body = replace_template_variables(active_tpl['body'], contact_data)
+        subject = replace_template_variables(active_tpl["subject"], contact_data)
+        body = replace_template_variables(active_tpl["body"], contact_data)
 
         # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace('\n', '<br>')
+        body_html = body.replace("\n", "<br>")
 
         # Parse and resolve attachments if present
         attachments = None
-        if active_tpl.get('attachment'):
+        if active_tpl.get("attachment"):
             try:
-                attachment_refs = json.loads(active_tpl['attachment'])
+                attachment_refs = json.loads(active_tpl["attachment"])
                 attachments = get_template_attachments(user, db, attachment_refs)
             except:
                 pass
@@ -1538,81 +1839,102 @@ def sync_email_generation_and_send(user: User, db: Session, contact_data: dict):
     except:
         pass
 
-async def process_and_send_email_admin(admin_username: str, contact_data: dict, db_session: Session):
+
+async def process_and_send_email_admin(
+    admin_username: str, contact_data: dict, db_session: Session
+):
     """
     Send email for enterprise admin using their active template.
     Uses programmatic variable replacement.
     """
-    statement = select(EnterpriseAdmin).where(EnterpriseAdmin.username == admin_username)
+    statement = select(EnterpriseAdmin).where(
+        EnterpriseAdmin.username == admin_username
+    )
     admin = db_session.exec(statement).first()
-    if not admin or not admin.email_feature_enabled: return
+    if not admin or not admin.email_feature_enabled:
+        return
 
-    emails = normalize_emails(contact_data.get('email', []))
-    if not emails: return
+    emails = normalize_emails(contact_data.get("email", []))
+    if not emails:
+        return
 
     try:
         templates = fetch_templates(admin, db_session)
-        active_tpl = next((t for t in templates if t['active'] == 'TRUE'), None)
-        if not active_tpl: return
+        active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
+        if not active_tpl:
+            return
 
         # Programmatically replace variables
-        subject = replace_template_variables(active_tpl['subject'], contact_data)
-        body = replace_template_variables(active_tpl['body'], contact_data)
+        subject = replace_template_variables(active_tpl["subject"], contact_data)
+        body = replace_template_variables(active_tpl["body"], contact_data)
 
         # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace('\n', '<br>')
+        body_html = body.replace("\n", "<br>")
 
         # Parse and resolve attachments if present
         attachment = None
-        if active_tpl.get('attachment'):
+        if active_tpl.get("attachment"):
             try:
-                attachment_refs = json.loads(active_tpl['attachment'])
-                attachment = get_template_attachments(admin, db_session, attachment_refs)
+                attachment_refs = json.loads(active_tpl["attachment"])
+                attachment = get_template_attachments(
+                    admin, db_session, attachment_refs
+                )
             except:
                 pass
 
         # Send emails
         for email_addr in emails:
             try:
-                send_gmail(admin, db_session, email_addr, subject, body_html, attachment)
+                send_gmail(
+                    admin, db_session, email_addr, subject, body_html, attachment
+                )
             except:
                 pass
     except:
         pass
 
-async def process_and_send_email_enterprise(admin: EnterpriseAdmin, contact_data: dict, template: dict, db_session: Session):
+
+async def process_and_send_email_enterprise(
+    admin: EnterpriseAdmin, contact_data: dict, template: dict, db_session: Session
+):
     """
     Send email for enterprise sub-account using admin's Gmail and assigned template.
     Uses programmatic variable replacement.
     """
-    emails = normalize_emails(contact_data.get('email', []))
-    if not emails: return
+    emails = normalize_emails(contact_data.get("email", []))
+    if not emails:
+        return
 
     try:
         # Programmatically replace variables
-        subject = replace_template_variables(template['subject'], contact_data)
-        body = replace_template_variables(template['body'], contact_data)
+        subject = replace_template_variables(template["subject"], contact_data)
+        body = replace_template_variables(template["body"], contact_data)
 
         # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace('\n', '<br>')
+        body_html = body.replace("\n", "<br>")
 
         # Parse and resolve attachments if present
         attachments = None
-        if template.get('attachment'):
+        if template.get("attachment"):
             try:
-                attachment_refs = json.loads(template['attachment'])
-                attachments = get_template_attachments(admin, db_session, attachment_refs)
+                attachment_refs = json.loads(template["attachment"])
+                attachments = get_template_attachments(
+                    admin, db_session, attachment_refs
+                )
             except:
                 pass
 
         # Send emails
         for email_addr in emails:
             try:
-                send_gmail(admin, db_session, email_addr, subject, body_html, attachments)
+                send_gmail(
+                    admin, db_session, email_addr, subject, body_html, attachments
+                )
             except:
                 pass
     except:
         pass
+
 
 def background_bulk_worker(user_identifier: str, db_session: Session):
     """Background worker for single users and enterprise admins."""
@@ -1622,13 +1944,24 @@ def background_bulk_worker(user_identifier: str, db_session: Session):
 
     # If not found, try enterprise admin by email
     if not user:
-        statement = select(EnterpriseAdmin).where(EnterpriseAdmin.email == user_identifier)
+        statement = select(EnterpriseAdmin).where(
+            EnterpriseAdmin.email == user_identifier
+        )
         user = db_session.exec(statement).first()
 
-    if not user: return
-    process_bulk_queue_sync(user, db_session, process_func=sync_process_image_logic, email_func=sync_email_generation_and_send)
+    if not user:
+        return
+    process_bulk_queue_sync(
+        user,
+        db_session,
+        process_func=sync_process_image_logic,
+        email_func=sync_email_generation_and_send,
+    )
 
-def background_bulk_worker_sub_account(admin_id: int, sub_account_id: int, db_session: Session):
+
+def background_bulk_worker_sub_account(
+    admin_id: int, sub_account_id: int, db_session: Session
+):
     """Background worker for sub-accounts."""
     admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.id == admin_id)
     admin = db_session.exec(admin_stmt).first()
@@ -1636,7 +1969,8 @@ def background_bulk_worker_sub_account(admin_id: int, sub_account_id: int, db_se
     sub_stmt = select(SubAccount).where(SubAccount.id == sub_account_id)
     sub_account = db_session.exec(sub_stmt).first()
 
-    if not admin or not sub_account: return
+    if not admin or not sub_account:
+        return
 
     # Import the sub-account bulk processor
     from backend.google_utils import process_bulk_queue_sync_sub_account
@@ -1645,26 +1979,33 @@ def background_bulk_worker_sub_account(admin_id: int, sub_account_id: int, db_se
     template = None
     if sub_account.assigned_template_id:
         templates = fetch_templates(admin, db_session)
-        template = next((t for t in templates if t['id'] == sub_account.assigned_template_id), None)
+        template = next(
+            (t for t in templates if t["id"] == sub_account.assigned_template_id), None
+        )
 
     process_bulk_queue_sync_sub_account(
-        admin, sub_account, db_session,
+        admin,
+        sub_account,
+        db_session,
         process_func=sync_process_image_logic,
-        template=template
+        template=template,
     )
+
 
 # ==========================================
 # 7. SCANNING & BULK ENDPOINTS
 # ==========================================
+
 
 @app.post("/api/scan")
 async def scan_card(
     file: UploadFile = File(...),
     token: str = None,
     bulk_stage: bool = False,
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
 ):
-    if not token: raise HTTPException(status_code=401, detail="Missing token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
     user, user_type = get_current_user_multi(token, db)
     file_bytes = await file.read()
 
@@ -1683,7 +2024,7 @@ async def scan_card(
             if user.scan_count >= settings.FREE_TIER_SCAN_LIMIT:
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Scan limit reached. You have used all {settings.FREE_TIER_SCAN_LIMIT} free scans for unlicensed accounts. Please contact a distributor to upgrade to a licensed account for unlimited scanning."
+                    detail=f"Scan limit reached. You have used all {settings.FREE_TIER_SCAN_LIMIT} free scans for unlicensed accounts. Please contact a distributor to upgrade to a licensed account for unlimited scanning.",
                 )
 
             # Increment scan count after successful scan (will be committed at the end)
@@ -1695,18 +2036,24 @@ async def scan_card(
     # MODE A: BULK STAGING
     if bulk_stage:
         if not is_google_connected(user, user_type, db):
-            raise HTTPException(status_code=403, detail="Please link Google Account for Bulk Mode.")
+            raise HTTPException(
+                status_code=403, detail="Please link Google Account for Bulk Mode."
+            )
 
         try:
             # Get the admin (for sub-accounts, this is their admin; for others, it's themselves)
             admin = get_admin_for_user(user, user_type, db)
 
-            filename = f"bulk_{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex[:4]}.jpg"
+            filename = (
+                f"bulk_{int(datetime.utcnow().timestamp())}_{uuid.uuid4().hex[:4]}.jpg"
+            )
 
             # For bulk staging, we need to handle sub-accounts specially
             if user_type == "sub_account":
                 # Sub-accounts stage to admin's Drive but use their own staging sheet
-                file_id = stage_bulk_image_sub_account(admin, user, db, file_bytes, filename)
+                file_id = stage_bulk_image_sub_account(
+                    admin, user, db, file_bytes, filename
+                )
             else:
                 file_id = stage_bulk_image(admin, db, file_bytes, filename)
 
@@ -1718,14 +2065,16 @@ async def scan_card(
             raise HTTPException(status_code=500, detail=f"Upload Failed: {str(e)}")
 
     # MODE B: SINGLE SCAN
-    print(f"\n{'#'*80}")
+    print(f"\n{'#' * 80}")
     print(f"[SCAN ENDPOINT] === SINGLE SCAN MODE ===")
     print(f"[SCAN ENDPOINT] Filename: {file.filename}")
     print(f"[SCAN ENDPOINT] Content-Type: {file.content_type}")
     print(f"[SCAN ENDPOINT] File size: {len(file_bytes)} bytes")
-    print(f"[SCAN ENDPOINT] User: {user.email if hasattr(user, 'email') else user.username}")
+    print(
+        f"[SCAN ENDPOINT] User: {user.email if hasattr(user, 'email') else user.username}"
+    )
     print(f"[SCAN ENDPOINT] User type: {user_type}")
-    print(f"{'#'*80}\n")
+    print(f"{'#' * 80}\n")
 
     # Extract OCR text using abstraction layer
     print(f"[SCAN ENDPOINT] Step 1: Calling OCR service...")
@@ -1737,15 +2086,20 @@ async def scan_card(
 
     print(f"[SCAN ENDPOINT] Step 2: Calling AI processing...")
     structured_data = await async_process_image_logic(file_bytes, raw_text)
-    print(f"[SCAN ENDPOINT] Step 2 Complete: AI returned data with keys: {list(structured_data.keys())}")
+    print(
+        f"[SCAN ENDPOINT] Step 2 Complete: AI returned data with keys: {list(structured_data.keys())}"
+    )
 
     result = {"raw_text": raw_text, "structured": structured_data}
     print(f"[SCAN ENDPOINT] ✅ Final result to return: {result}")
-    print(f"\n{'#'*80}\n")
+    print(f"\n{'#' * 80}\n")
     return result
 
+
 @app.post("/api/bulk/submit")
-def submit_bulk(token: str, background_tasks: BackgroundTasks, db: Session = Depends(get_session)):
+def submit_bulk(
+    token: str, background_tasks: BackgroundTasks, db: Session = Depends(get_session)
+):
     user, user_type = get_current_user_multi(token, db)
     if not is_google_connected(user, user_type, db):
         raise HTTPException(status_code=400, detail="Google not connected")
@@ -1756,11 +2110,13 @@ def submit_bulk(token: str, background_tasks: BackgroundTasks, db: Session = Dep
         if user_type == "sub_account":
             count = submit_bulk_session_sub_account(admin, user, db)
             if count > 0:
-                background_tasks.add_task(background_bulk_worker_sub_account, admin.id, user.id, db)
+                background_tasks.add_task(
+                    background_bulk_worker_sub_account, admin.id, user.id, db
+                )
         else:
             count = submit_bulk_session(admin, db)
             if count > 0:
-                identifier = getattr(admin, 'email', None) or getattr(admin, 'username')
+                identifier = getattr(admin, "email", None) or getattr(admin, "username")
                 background_tasks.add_task(background_bulk_worker, identifier, db)
 
         return {"status": "submitted", "count": count}
@@ -1768,6 +2124,7 @@ def submit_bulk(token: str, background_tasks: BackgroundTasks, db: Session = Dep
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/bulk/cancel")
 def cancel_bulk(token: str, db: Session = Depends(get_session)):
@@ -1785,6 +2142,7 @@ def cancel_bulk(token: str, db: Session = Depends(get_session)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/bulk/check")
 def check_bulk_status(token: str, db: Session = Depends(get_session)):
     user, user_type = get_current_user_multi(token, db)
@@ -1798,38 +2156,53 @@ def check_bulk_status(token: str, db: Session = Depends(get_session)):
         return {"count": count}
     except HTTPException as e:
         raise e
-    except: return {"count": 0}
+    except:
+        return {"count": 0}
+
 
 # ==========================================
 # 8. CONTACT SAVING & EXPORT
 # ==========================================
+
 
 @app.post("/api/contacts/save")
 def save_contact_to_google(
     contact: ContactSave,
     token: str,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
 ):
     user, user_type = get_current_user_multi(token, db)
 
     # Build contact row data
     cat_str = ", ".join(contact.cat) if contact.cat else ""
     row_data = [
-        ", ".join(contact.fn), contact.org, ", ".join(contact.tel),
-        contact.title, ", ".join(contact.email), ", ".join(contact.url),
-        ", ".join(contact.adr), "General", cat_str, contact.notes
+        ", ".join(contact.fn),
+        contact.org,
+        ", ".join(contact.tel),
+        contact.title,
+        ", ".join(contact.email),
+        ", ".join(contact.url),
+        ", ".join(contact.adr),
+        "General",
+        cat_str,
+        contact.notes,
     ]
 
     try:
         # Handle different user types
         if user_type == "sub_account":
             # Sub-account: Save to their dedicated sheet in admin's spreadsheet
-            admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.id == user.admin_id)
+            admin_stmt = select(EnterpriseAdmin).where(
+                EnterpriseAdmin.id == user.admin_id
+            )
             admin = db.exec(admin_stmt).first()
 
             if not admin or not admin.google_connected:
-                return {"status": "skipped", "detail": "Admin's Google account not connected."}
+                return {
+                    "status": "skipped",
+                    "detail": "Admin's Google account not connected.",
+                }
 
             # Append to sub-account's sheet
             append_to_sub_account_sheet(admin, user, db, row_data)
@@ -1838,11 +2211,22 @@ def save_contact_to_google(
             if user.assigned_template_id and contact.email:
                 # Fetch the assigned template from admin's templates
                 templates = fetch_templates(admin, db)
-                assigned_template = next((t for t in templates if t['id'] == user.assigned_template_id), None)
+                assigned_template = next(
+                    (t for t in templates if t["id"] == user.assigned_template_id), None
+                )
 
                 if assigned_template:
-                    background_tasks.add_task(process_and_send_email_enterprise, admin, contact.dict(), assigned_template, db)
-                    return {"status": "success", "detail": "Saved to Google Sheet & Email Queued."}
+                    background_tasks.add_task(
+                        process_and_send_email_enterprise,
+                        admin,
+                        contact.dict(),
+                        assigned_template,
+                        db,
+                    )
+                    return {
+                        "status": "success",
+                        "detail": "Saved to Google Sheet & Email Queued.",
+                    }
 
             return {"status": "success", "detail": "Saved to Google Sheet."}
 
@@ -1855,20 +2239,33 @@ def save_contact_to_google(
 
             # For admin's own scanning, use the currently active template
             if user.email_feature_enabled and contact.email:
-                background_tasks.add_task(process_and_send_email_admin, user.username, contact.dict(), db)
-                return {"status": "success", "detail": "Saved to Google Sheet & Email Queued."}
+                background_tasks.add_task(
+                    process_and_send_email_admin, user.username, contact.dict(), db
+                )
+                return {
+                    "status": "success",
+                    "detail": "Saved to Google Sheet & Email Queued.",
+                }
 
             return {"status": "success", "detail": "Saved to Google Sheet."}
 
         else:  # Single user
             if not user.google_connected:
-                return {"status": "skipped", "detail": "Saved locally only (Google not linked)."}
+                return {
+                    "status": "skipped",
+                    "detail": "Saved locally only (Google not linked).",
+                }
 
             append_to_sheet(user, db, row_data)
 
             if user.email_feature_enabled and contact.email:
-                background_tasks.add_task(process_and_send_email, user.email, contact.dict(), db)
-                return {"status": "success", "detail": "Saved to Google Sheet & Email Queued."}
+                background_tasks.add_task(
+                    process_and_send_email, user.email, contact.dict(), db
+                )
+                return {
+                    "status": "success",
+                    "detail": "Saved to Google Sheet & Email Queued.",
+                }
 
             return {"status": "success", "detail": "Saved to Google Sheet."}
 
@@ -1876,6 +2273,7 @@ def save_contact_to_google(
         raise e
     except Exception as e:
         return {"status": "error", "detail": str(e)}
+
 
 @app.get("/api/contacts/export")
 def export_contacts(token: str, db: Session = Depends(get_session)):
@@ -1893,22 +2291,30 @@ def export_contacts(token: str, db: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail="No spreadsheet found")
 
     try:
-        drive_service = build('drive', 'v3', credentials=creds)
-        file_data = drive_service.files().export_media(
-            fileId=spreadsheet_id,
-            mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        ).execute()
+        drive_service = build("drive", "v3", credentials=creds)
+        file_data = (
+            drive_service.files()
+            .export_media(
+                fileId=spreadsheet_id,
+                mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            .execute()
+        )
         return StreamingResponse(
             io.BytesIO(file_data),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=DigiCard_Contacts.xlsx"}
+            headers={
+                "Content-Disposition": "attachment; filename=DigiCard_Contacts.xlsx"
+            },
         )
     except HttpError as e:
         handle_google_api_error(e, "Exporting Contacts")
 
+
 # ==========================================
 # 9. EMAIL SETTINGS ENDPOINTS
 # ==========================================
+
 
 @app.get("/api/email/settings")
 def get_email_settings(token: str, db: Session = Depends(get_session)):
@@ -1916,7 +2322,9 @@ def get_email_settings(token: str, db: Session = Depends(get_session)):
 
     # Sub-accounts don't have email settings - only admins do
     if user_type == "sub_account":
-        raise HTTPException(status_code=403, detail="Email settings not available for sub-accounts")
+        raise HTTPException(
+            status_code=403, detail="Email settings not available for sub-accounts"
+        )
 
     if not is_google_connected(user, user_type, db):
         raise HTTPException(status_code=400, detail="Google not connected")
@@ -1924,9 +2332,14 @@ def get_email_settings(token: str, db: Session = Depends(get_session)):
     try:
         google_user = get_admin_for_user(user, user_type, db)
         templates = fetch_templates(google_user, db)
-        return {"enabled": google_user.email_feature_enabled, "templates": templates, "count": len(templates)}
+        return {
+            "enabled": google_user.email_feature_enabled,
+            "templates": templates,
+            "count": len(templates),
+        }
     except HTTPException as e:
         raise e
+
 
 @app.post("/api/email/toggle")
 def toggle_email_feature(enabled: bool, token: str, db: Session = Depends(get_session)):
@@ -1934,14 +2347,19 @@ def toggle_email_feature(enabled: bool, token: str, db: Session = Depends(get_se
 
     # Sub-accounts don't have email settings - only admins do
     if user_type == "sub_account":
-        raise HTTPException(status_code=403, detail="Email settings not available for sub-accounts")
+        raise HTTPException(
+            status_code=403, detail="Email settings not available for sub-accounts"
+        )
 
     if enabled:
         try:
             google_user = get_admin_for_user(user, user_type, db)
             templates = fetch_templates(google_user, db)
-            if not any(t['active'] == 'TRUE' for t in templates):
-                raise HTTPException(status_code=400, detail="Please set at least one active template before enabling.")
+            if not any(t["active"] == "TRUE" for t in templates):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Please set at least one active template before enabling.",
+                )
         except HTTPException as e:
             raise e
 
@@ -1950,27 +2368,44 @@ def toggle_email_feature(enabled: bool, token: str, db: Session = Depends(get_se
     db.commit()
     return {"status": "success", "enabled": enabled}
 
+
 @app.post("/api/email/templates")
-def create_template_endpoint(tpl: TemplateCreate, token: str, db: Session = Depends(get_session)):
+def create_template_endpoint(
+    tpl: TemplateCreate, token: str, db: Session = Depends(get_session)
+):
     user, user_type = get_current_user_multi(token, db)
     if user_type == "sub_account":
-        raise HTTPException(status_code=403, detail="Email settings not available for sub-accounts")
+        raise HTTPException(
+            status_code=403, detail="Email settings not available for sub-accounts"
+        )
     google_user = get_admin_for_user(user, user_type, db)
     return add_template(google_user, db, tpl.subject, tpl.body, tpl.attachments)
 
+
 @app.put("/api/email/templates/{row_id}")
-def update_template_endpoint(row_id: int, tpl: TemplateCreate, token: str, db: Session = Depends(get_session)):
+def update_template_endpoint(
+    row_id: int, tpl: TemplateCreate, token: str, db: Session = Depends(get_session)
+):
     user, user_type = get_current_user_multi(token, db)
     if user_type == "sub_account":
-        raise HTTPException(status_code=403, detail="Email settings not available for sub-accounts")
+        raise HTTPException(
+            status_code=403, detail="Email settings not available for sub-accounts"
+        )
     google_user = get_admin_for_user(user, user_type, db)
-    return update_template_content(google_user, db, row_id, tpl.subject, tpl.body, tpl.attachments)
+    return update_template_content(
+        google_user, db, row_id, tpl.subject, tpl.body, tpl.attachments
+    )
+
 
 @app.post("/api/email/templates/{row_id}/activate")
-def activate_template_endpoint(row_id: int, active: bool, token: str, db: Session = Depends(get_session)):
+def activate_template_endpoint(
+    row_id: int, active: bool, token: str, db: Session = Depends(get_session)
+):
     user, user_type = get_current_user_multi(token, db)
     if user_type == "sub_account":
-        raise HTTPException(status_code=403, detail="Email settings not available for sub-accounts")
+        raise HTTPException(
+            status_code=403, detail="Email settings not available for sub-accounts"
+        )
     google_user = get_admin_for_user(user, user_type, db)
 
     # Update template status
@@ -1978,20 +2413,22 @@ def activate_template_endpoint(row_id: int, active: bool, token: str, db: Sessio
 
     # Check if any templates are active after this change
     templates = fetch_templates(google_user, db)
-    has_active_template = any(t['active'] == 'TRUE' for t in templates)
+    has_active_template = any(t["active"] == "TRUE" for t in templates)
 
     # Auto-disable email feature if no active templates
     if not has_active_template and user.email_feature_enabled:
         user.email_feature_enabled = False
         db.add(user)
         db.commit()
-        result['email_auto_disabled'] = True
+        result["email_auto_disabled"] = True
 
     return result
+
 
 # ==========================================
 # 10. ENTERPRISE ADMIN PANEL ENDPOINTS
 # ==========================================
+
 
 @app.get("/api/admin/license")
 def get_license_info(token: str, db: Session = Depends(get_session)):
@@ -2016,24 +2453,31 @@ def get_license_info(token: str, db: Session = Depends(get_session)):
     license_expires_at = license_record.created_at + timedelta(days=365)
 
     return {
-        "license_key": license_record.license_key[:8] + "..." + license_record.license_key[-4:],
+        "license_key": license_record.license_key[:8]
+        + "..."
+        + license_record.license_key[-4:],
         "is_active": license_record.is_active,
         "is_valid": license_valid,
         "created_at": license_record.created_at.isoformat(),
         "expires_at": license_expires_at.isoformat(),
         "limits": limits,
         "current_sub_accounts": len(sub_accounts),
-        "max_sub_accounts": limits.get("max_sub_accounts", 5)
+        "max_sub_accounts": limits.get("max_sub_accounts", 5),
     }
 
+
 @app.post("/api/admin/expand-seats")
-def expand_seats(data: SeatExpansionRequest, token: str, db: Session = Depends(get_session)):
+def expand_seats(
+    data: SeatExpansionRequest, token: str, db: Session = Depends(get_session)
+):
     """Expand the number of available seats for enterprise admin's license."""
     admin = get_current_admin(token, db)
 
     # Validate additional seats
     if data.additional_seats <= 0:
-        raise HTTPException(status_code=400, detail="Additional seats must be greater than 0")
+        raise HTTPException(
+            status_code=400, detail="Additional seats must be greater than 0"
+        )
 
     # Get license
     license_stmt = select(License).where(License.id == admin.license_id)
@@ -2070,17 +2514,18 @@ def expand_seats(data: SeatExpansionRequest, token: str, db: Session = Depends(g
         "previous_max": current_max,
         "new_max": new_max,
         "current_sub_accounts": current_count,
-        "available_seats": new_max - current_count
+        "available_seats": new_max - current_count,
     }
+
 
 @app.get("/api/admin/sub-accounts")
 def list_sub_accounts(token: str, db: Session = Depends(get_session)):
     """List all sub-accounts for this enterprise admin."""
     admin = get_current_admin(token, db)
-    
+
     stmt = select(SubAccount).where(SubAccount.admin_id == admin.id)
     sub_accounts = db.exec(stmt).all()
-    
+
     return {
         "sub_accounts": [
             {
@@ -2089,18 +2534,21 @@ def list_sub_accounts(token: str, db: Session = Depends(get_session)):
                 "is_active": sub.is_active,
                 "created_at": sub.created_at.isoformat() if sub.created_at else None,
                 "is_logged_in": sub.current_session_id is not None,
-                "assigned_template_id": sub.assigned_template_id
+                "assigned_template_id": sub.assigned_template_id,
             }
             for sub in sub_accounts
         ],
-        "count": len(sub_accounts)
+        "count": len(sub_accounts),
     }
 
+
 @app.post("/api/admin/sub-accounts")
-def create_sub_account(data: SubAccountCreate, token: str, db: Session = Depends(get_session)):
+def create_sub_account(
+    data: SubAccountCreate, token: str, db: Session = Depends(get_session)
+):
     """Create a new sub-account under this enterprise admin."""
     admin = get_current_admin(token, db)
-    
+
     # Check license limits and expiration
     license_stmt = select(License).where(License.id == admin.license_id)
     license_record = db.exec(license_stmt).first()
@@ -2109,20 +2557,25 @@ def create_sub_account(data: SubAccountCreate, token: str, db: Session = Depends
         if license_record and not license_record.is_active:
             raise HTTPException(status_code=403, detail="License is not active")
         elif license_record:
-            raise HTTPException(status_code=403, detail="License has expired. Please renew your license to create sub-accounts.")
+            raise HTTPException(
+                status_code=403,
+                detail="License has expired. Please renew your license to create sub-accounts.",
+            )
         else:
             raise HTTPException(status_code=403, detail="No valid license found")
-    
+
     limits = json.loads(license_record.limits)
     max_subs = limits.get("max_sub_accounts", 5)
-    
+
     # Count current sub-accounts
     current_count_stmt = select(SubAccount).where(SubAccount.admin_id == admin.id)
     current_count = len(db.exec(current_count_stmt).all())
-    
+
     if current_count >= max_subs:
-        raise HTTPException(status_code=403, detail=f"License limit reached ({max_subs} sub-accounts)")
-    
+        raise HTTPException(
+            status_code=403, detail=f"License limit reached ({max_subs} sub-accounts)"
+        )
+
     # Check email uniqueness across all user types
     email_check = select(SubAccount).where(SubAccount.email == data.email)
     if db.exec(email_check).first():
@@ -2142,7 +2595,7 @@ def create_sub_account(data: SubAccountCreate, token: str, db: Session = Depends
         email=data.email,  # For sub-accounts, this is the username string
         password_hash=get_password_hash(data.password),
         admin_id=admin.id,
-        is_active=True
+        is_active=True,
     )
     db.add(sub)
     db.commit()
@@ -2163,17 +2616,22 @@ def create_sub_account(data: SubAccountCreate, token: str, db: Session = Depends
             "id": sub.id,
             "email": sub.email,  # For sub-accounts, this is the username string
             "is_active": sub.is_active,
-            "sheet_name": sub.sheet_name
-        }
+            "sheet_name": sub.sheet_name,
+        },
     }
 
+
 @app.put("/api/admin/sub-accounts/{sub_id}")
-def update_sub_account(sub_id: int, data: SubAccountUpdate, token: str, db: Session = Depends(get_session)):
+def update_sub_account(
+    sub_id: int, data: SubAccountUpdate, token: str, db: Session = Depends(get_session)
+):
     """Update a sub-account's email or password."""
     admin = get_current_admin(token, db)
 
     # Find sub-account (must belong to this admin)
-    stmt = select(SubAccount).where(SubAccount.id == sub_id, SubAccount.admin_id == admin.id)
+    stmt = select(SubAccount).where(
+        SubAccount.id == sub_id, SubAccount.admin_id == admin.id
+    )
     sub = db.exec(stmt).first()
 
     if not sub:
@@ -2207,33 +2665,41 @@ def update_sub_account(sub_id: int, data: SubAccountUpdate, token: str, db: Sess
 
     return {"status": "success", "message": "Sub-account updated"}
 
+
 @app.post("/api/admin/sub-accounts/{sub_id}/toggle")
-def toggle_sub_account(sub_id: int, active: bool, token: str, db: Session = Depends(get_session)):
+def toggle_sub_account(
+    sub_id: int, active: bool, token: str, db: Session = Depends(get_session)
+):
     """Activate or deactivate a sub-account."""
     admin = get_current_admin(token, db)
-    
-    stmt = select(SubAccount).where(SubAccount.id == sub_id, SubAccount.admin_id == admin.id)
+
+    stmt = select(SubAccount).where(
+        SubAccount.id == sub_id, SubAccount.admin_id == admin.id
+    )
     sub = db.exec(stmt).first()
-    
+
     if not sub:
         raise HTTPException(status_code=404, detail="Sub-account not found")
-    
+
     sub.is_active = active
     if not active:
         # Force logout when deactivating
         sub.current_session_id = None
-    
+
     db.add(sub)
     db.commit()
-    
+
     return {"status": "success", "is_active": sub.is_active}
+
 
 @app.delete("/api/admin/sub-accounts/{sub_id}")
 def delete_sub_account(sub_id: int, token: str, db: Session = Depends(get_session)):
     """Delete a sub-account permanently."""
     admin = get_current_admin(token, db)
 
-    stmt = select(SubAccount).where(SubAccount.id == sub_id, SubAccount.admin_id == admin.id)
+    stmt = select(SubAccount).where(
+        SubAccount.id == sub_id, SubAccount.admin_id == admin.id
+    )
     sub = db.exec(stmt).first()
 
     if not sub:
@@ -2244,9 +2710,11 @@ def delete_sub_account(sub_id: int, token: str, db: Session = Depends(get_sessio
 
     return {"status": "success", "message": "Sub-account deleted"}
 
+
 # ==========================================
 # 11. ENTERPRISE EXPORTS & TEMPLATE ASSIGNMENT
 # ==========================================
+
 
 @app.get("/api/admin/export/my-contacts")
 def export_admin_own_contacts(token: str, db: Session = Depends(get_session)):
@@ -2261,13 +2729,16 @@ def export_admin_own_contacts(token: str, db: Session = Depends(get_session)):
         return StreamingResponse(
             io.BytesIO(file_data),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except HttpError as e:
         handle_google_api_error(e, "Exporting Admin Contacts")
 
+
 @app.get("/api/admin/export/sub-account/{sub_id}")
-def export_sub_account_contacts(sub_id: int, token: str, db: Session = Depends(get_session)):
+def export_sub_account_contacts(
+    sub_id: int, token: str, db: Session = Depends(get_session)
+):
     """Export a specific sub-account's contacts."""
     admin = get_current_admin(token, db)
 
@@ -2275,7 +2746,9 @@ def export_sub_account_contacts(sub_id: int, token: str, db: Session = Depends(g
         raise HTTPException(status_code=400, detail="Google not connected")
 
     # Find sub-account
-    stmt = select(SubAccount).where(SubAccount.id == sub_id, SubAccount.admin_id == admin.id)
+    stmt = select(SubAccount).where(
+        SubAccount.id == sub_id, SubAccount.admin_id == admin.id
+    )
     sub = db.exec(stmt).first()
 
     if not sub:
@@ -2285,14 +2758,17 @@ def export_sub_account_contacts(sub_id: int, token: str, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Sub-account sheet not created yet")
 
     try:
-        file_data, filename = export_sheet_as_excel(admin, db, sheet_name=sub.sheet_name)
+        file_data, filename = export_sheet_as_excel(
+            admin, db, sheet_name=sub.sheet_name
+        )
         return StreamingResponse(
             io.BytesIO(file_data),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except HttpError as e:
         handle_google_api_error(e, "Exporting Sub-Account Contacts")
+
 
 @app.get("/api/admin/export/all-combined")
 def export_all_combined_contacts(token: str, db: Session = Depends(get_session)):
@@ -2311,18 +2787,23 @@ def export_all_combined_contacts(token: str, db: Session = Depends(get_session))
         return StreamingResponse(
             io.BytesIO(file_data),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except HttpError as e:
         handle_google_api_error(e, "Exporting Combined Contacts")
 
+
 @app.post("/api/admin/sub-accounts/{sub_id}/assign-template")
-def assign_template_to_sub_account(sub_id: int, template_id: str, token: str, db: Session = Depends(get_session)):
+def assign_template_to_sub_account(
+    sub_id: int, template_id: str, token: str, db: Session = Depends(get_session)
+):
     """Assign an email template to a sub-account for auto-mailing."""
     admin = get_current_admin(token, db)
 
     # Find sub-account
-    stmt = select(SubAccount).where(SubAccount.id == sub_id, SubAccount.admin_id == admin.id)
+    stmt = select(SubAccount).where(
+        SubAccount.id == sub_id, SubAccount.admin_id == admin.id
+    )
     sub = db.exec(stmt).first()
 
     if not sub:
@@ -2331,7 +2812,7 @@ def assign_template_to_sub_account(sub_id: int, template_id: str, token: str, db
     # Verify template exists in admin's templates
     if template_id != "none":  # "none" means disable auto-email
         templates = fetch_templates(admin, db)
-        if not any(t['id'] == template_id for t in templates):
+        if not any(t["id"] == template_id for t in templates):
             raise HTTPException(status_code=404, detail="Template not found")
 
     # Assign template
@@ -2342,12 +2823,14 @@ def assign_template_to_sub_account(sub_id: int, template_id: str, token: str, db
     return {
         "status": "success",
         "sub_account_id": sub.id,
-        "assigned_template_id": sub.assigned_template_id
+        "assigned_template_id": sub.assigned_template_id,
     }
+
 
 # ==========================================
 # 9. DISTRIBUTOR ENDPOINTS
 # ==========================================
+
 
 @app.get("/api/distributor/dashboard")
 def get_distributor_dashboard(token: str, db: Session = Depends(get_session)):
@@ -2355,11 +2838,15 @@ def get_distributor_dashboard(token: str, db: Session = Depends(get_session)):
     user, user_type, distributor = get_current_distributor(token, db)
 
     # Get all single user accounts created by this distributor
-    single_users_stmt = select(User).where(User.created_by_distributor_id == distributor.id)
+    single_users_stmt = select(User).where(
+        User.created_by_distributor_id == distributor.id
+    )
     single_users = db.exec(single_users_stmt).all()
 
     # Get all enterprise admin accounts created by this distributor
-    enterprise_admins_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.created_by_distributor_id == distributor.id)
+    enterprise_admins_stmt = select(EnterpriseAdmin).where(
+        EnterpriseAdmin.created_by_distributor_id == distributor.id
+    )
     enterprise_admins = db.exec(enterprise_admins_stmt).all()
 
     # Calculate stats
@@ -2372,21 +2859,16 @@ def get_distributor_dashboard(token: str, db: Session = Depends(get_session)):
 
     # Accounts created this month
     single_this_month = sum(1 for u in single_users if u.created_at >= start_of_month)
-    enterprise_this_month = sum(1 for a in enterprise_admins if a.created_at >= start_of_month)
+    enterprise_this_month = sum(
+        1 for a in enterprise_admins if a.created_at >= start_of_month
+    )
 
     return {
-        "single": {
-            "total": single_total,
-            "this_month": single_this_month
-        },
-        "enterprise": {
-            "total": enterprise_total,
-            "this_month": enterprise_this_month
-        },
-        "monthly": {
-            "total_created": single_this_month + enterprise_this_month
-        }
+        "single": {"total": single_total, "this_month": single_this_month},
+        "enterprise": {"total": enterprise_total, "this_month": enterprise_this_month},
+        "monthly": {"total_created": single_this_month + enterprise_this_month},
     }
+
 
 # DEPRECATED: License purchasing is no longer needed
 # Distributors now create accounts directly without pre-purchasing licenses
@@ -2396,11 +2878,12 @@ def get_distributor_dashboard(token: str, db: Session = Depends(get_session)):
 # def purchase_licenses(...):
 #     ...
 
+
 @app.post("/api/distributor/create-account")
 def create_account_as_distributor(
     account_data: DistributorAccountCreate,
     token: str,
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
 ):
     """
     Create a new user account (single or enterprise) with on-the-fly license generation.
@@ -2414,24 +2897,30 @@ def create_account_as_distributor(
     user, user_type, distributor = get_current_distributor(token, db)
 
     if account_data.account_type not in ["single", "enterprise"]:
-        raise HTTPException(status_code=400, detail="Account type must be 'single' or 'enterprise'")
+        raise HTTPException(
+            status_code=400, detail="Account type must be 'single' or 'enterprise'"
+        )
 
     # UPGRADE FLOW: Delete old unlicensed account if upgrading
     old_account_deleted = False
     if account_data.upgrade_from_email:
         # Find the old unlicensed account
-        old_user_stmt = select(User).where(User.email == account_data.upgrade_from_email)
+        old_user_stmt = select(User).where(
+            User.email == account_data.upgrade_from_email
+        )
         old_user = db.exec(old_user_stmt).first()
 
         if old_user:
             # Verify the old account doesn't have a valid license
             if old_user.license_id:
-                old_license_stmt = select(License).where(License.id == old_user.license_id)
+                old_license_stmt = select(License).where(
+                    License.id == old_user.license_id
+                )
                 old_license = db.exec(old_license_stmt).first()
                 if is_license_valid(old_license):
                     raise HTTPException(
                         status_code=400,
-                        detail="Cannot upgrade an account that already has a valid license"
+                        detail="Cannot upgrade an account that already has a valid license",
                     )
 
             # Delete the old account
@@ -2440,7 +2929,7 @@ def create_account_as_distributor(
             old_account_deleted = True
 
     # Validate email format
-    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', account_data.email):
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", account_data.email):
         raise HTTPException(status_code=400, detail="Invalid email format")
 
     # === Handle existing free trial account conversion ===
@@ -2453,12 +2942,14 @@ def create_account_as_distributor(
         if existing_user:
             # Check if account already has a valid license
             if existing_user.license_id:
-                existing_license_stmt = select(License).where(License.id == existing_user.license_id)
+                existing_license_stmt = select(License).where(
+                    License.id == existing_user.license_id
+                )
                 existing_license = db.exec(existing_license_stmt).first()
                 if is_license_valid(existing_license):
                     raise HTTPException(
                         status_code=400,
-                        detail="This account already has a valid license"
+                        detail="This account already has a valid license",
                     )
 
             # Account exists and passes validation - convert to licensed account
@@ -2468,17 +2959,25 @@ def create_account_as_distributor(
     if not existing_account_converted:
         if db.exec(select(User).where(User.email == account_data.email)).first():
             raise HTTPException(status_code=400, detail="Email already registered")
-        if db.exec(select(EnterpriseAdmin).where(EnterpriseAdmin.email == account_data.email)).first():
+        if db.exec(
+            select(EnterpriseAdmin).where(EnterpriseAdmin.email == account_data.email)
+        ).first():
             raise HTTPException(status_code=400, detail="Email already registered")
-        if db.exec(select(SubAccount).where(SubAccount.email == account_data.email)).first():
+        if db.exec(
+            select(SubAccount).where(SubAccount.email == account_data.email)
+        ).first():
             raise HTTPException(status_code=400, detail="Email already registered")
 
     # === GENERATE LICENSE ON-THE-FLY (no inventory required) ===
     if account_data.account_type == "enterprise":
-        license_key = f"ENT-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        license_key = (
+            f"ENT-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        )
         limits = json.dumps({"max_sub_accounts": 1})
     else:  # single
-        license_key = f"SGL-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        license_key = (
+            f"SGL-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        )
         limits = json.dumps({})
 
     # Create license record
@@ -2486,13 +2985,15 @@ def create_account_as_distributor(
         license_key=license_key,
         license_type=account_data.account_type,
         limits=limits,
-        is_active=True
+        is_active=True,
     )
     db.add(license_record)
     db.flush()  # Get the license ID
 
     # Generate temporary password if not provided
-    temp_password = account_data.password if account_data.password else generate_random_password(12)
+    temp_password = (
+        account_data.password if account_data.password else generate_random_password(12)
+    )
     password_hash = get_password_hash(temp_password)
 
     # === Handle existing account conversion vs new account creation ===
@@ -2500,7 +3001,9 @@ def create_account_as_distributor(
         # Convert existing free trial account to licensed account
         existing_user.license_id = license_record.id
         existing_user.password_hash = password_hash  # Reset password
-        existing_user.requires_password_change = True  # Force password change on next login
+        existing_user.requires_password_change = (
+            True  # Force password change on next login
+        )
         existing_user.current_session_id = None  # Invalidate existing session
         existing_user.created_by_distributor_id = distributor.id  # Track distributor
         # Note: scan_count is preserved to show previous usage
@@ -2518,7 +3021,7 @@ def create_account_as_distributor(
             requires_password_change=True,  # Force password change on first login
             license_id=license_record.id,  # Link the license to the user
             scan_count=0,  # Reset scan count for new licensed user
-            created_by_distributor_id=distributor.id  # Track which distributor created this account
+            created_by_distributor_id=distributor.id,  # Track which distributor created this account
         )
         db.add(new_user)
         db.flush()
@@ -2532,7 +3035,7 @@ def create_account_as_distributor(
             password_hash=password_hash,
             license_id=license_record.id,
             requires_password_change=True,  # Force password change on first login
-            created_by_distributor_id=distributor.id  # Track which distributor created this account
+            created_by_distributor_id=distributor.id,  # Track which distributor created this account
         )
         db.add(new_admin)
         db.flush()
@@ -2547,7 +3050,7 @@ def create_account_as_distributor(
         to_email=account_data.email,
         username=account_data.email,  # Use email as username in the email
         password=temp_password,
-        account_type=account_data.account_type
+        account_type=account_data.account_type,
     )
 
     # Build appropriate success message
@@ -2565,8 +3068,9 @@ def create_account_as_distributor(
         "license_key": license_record.license_key,
         "converted": existing_account_converted,
         "upgraded": old_account_deleted,
-        "message": message
+        "message": message,
     }
+
 
 @app.get("/api/distributor/accounts")
 def get_distributor_accounts(token: str, db: Session = Depends(get_session)):
@@ -2580,42 +3084,48 @@ def get_distributor_accounts(token: str, db: Session = Depends(get_session)):
 
     # Get all enterprise admin accounts created by this distributor
     enterprise_admins = db.exec(
-        select(EnterpriseAdmin).where(EnterpriseAdmin.created_by_distributor_id == distributor.id)
+        select(EnterpriseAdmin).where(
+            EnterpriseAdmin.created_by_distributor_id == distributor.id
+        )
     ).all()
 
     # Build account list
     accounts = []
 
     for user_account in single_users:
-        accounts.append({
-            "account_type": "single",
-            "email": user_account.email,
-            "created_at": user_account.created_at.isoformat(),
-            "license_id": user_account.license_id
-        })
+        accounts.append(
+            {
+                "account_type": "single",
+                "email": user_account.email,
+                "created_at": user_account.created_at.isoformat(),
+                "license_id": user_account.license_id,
+            }
+        )
 
     for admin_account in enterprise_admins:
-        accounts.append({
-            "account_type": "enterprise",
-            "email": admin_account.email,
-            "created_at": admin_account.created_at.isoformat(),
-            "license_id": admin_account.license_id
-        })
+        accounts.append(
+            {
+                "account_type": "enterprise",
+                "email": admin_account.email,
+                "created_at": admin_account.created_at.isoformat(),
+                "license_id": admin_account.license_id,
+            }
+        )
 
     # Sort by creation date (newest first)
     accounts.sort(key=lambda x: x["created_at"], reverse=True)
 
     return {"accounts": accounts}
 
+
 # ==========================================
 # 10. APP OWNER / ADMIN ENDPOINTS
 # ==========================================
 
+
 @app.get("/api/admin/distributor-activity")
 def get_distributor_activity(
-    token: str,
-    distributor_id: int = None,
-    db: Session = Depends(get_session)
+    token: str, distributor_id: int = None, db: Session = Depends(get_session)
 ):
     """
     Get comprehensive distributor activity report for app owners/developers.
@@ -2643,7 +3153,9 @@ def get_distributor_activity(
             dist_user = db.exec(user_stmt).first()
             dist_email = dist_user.email if dist_user else "Unknown"
         elif dist.user_type == "enterprise_admin":
-            admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.id == dist.user_id)
+            admin_stmt = select(EnterpriseAdmin).where(
+                EnterpriseAdmin.id == dist.user_id
+            )
             dist_admin = db.exec(admin_stmt).first()
             dist_email = dist_admin.email if dist_admin else "Unknown"
         else:  # sub_account
@@ -2657,52 +3169,61 @@ def get_distributor_activity(
         ).all()
 
         enterprise_accounts = db.exec(
-            select(EnterpriseAdmin).where(EnterpriseAdmin.created_by_distributor_id == dist.id)
+            select(EnterpriseAdmin).where(
+                EnterpriseAdmin.created_by_distributor_id == dist.id
+            )
         ).all()
 
         # Build account details
         created_accounts = []
 
         for user in single_accounts:
-            created_accounts.append({
-                "account_type": "single",
-                "email": user.email,
-                "created_at": user.created_at.isoformat(),
-                "license_id": user.license_id,
-                "is_active": True  # Single users don't have is_active field
-            })
+            created_accounts.append(
+                {
+                    "account_type": "single",
+                    "email": user.email,
+                    "created_at": user.created_at.isoformat(),
+                    "license_id": user.license_id,
+                    "is_active": True,  # Single users don't have is_active field
+                }
+            )
 
         for admin in enterprise_accounts:
-            created_accounts.append({
-                "account_type": "enterprise",
-                "email": admin.email,
-                "created_at": admin.created_at.isoformat(),
-                "license_id": admin.license_id,
-                "is_active": True  # Enterprise admins don't have is_active field
-            })
+            created_accounts.append(
+                {
+                    "account_type": "enterprise",
+                    "email": admin.email,
+                    "created_at": admin.created_at.isoformat(),
+                    "license_id": admin.license_id,
+                    "is_active": True,  # Enterprise admins don't have is_active field
+                }
+            )
 
         # Sort by creation date (newest first)
         created_accounts.sort(key=lambda x: x["created_at"], reverse=True)
 
-        distributor_reports.append({
-            "distributor_id": dist.id,
-            "distributor_email": dist_email,
-            "distributor_type": dist.user_type,
-            "is_active": dist.is_active,
-            "created_at": dist.created_at.isoformat(),
-            "total_accounts_created": len(created_accounts),
-            "single_accounts_count": len(single_accounts),
-            "enterprise_accounts_count": len(enterprise_accounts),
-            "accounts": created_accounts
-        })
+        distributor_reports.append(
+            {
+                "distributor_id": dist.id,
+                "distributor_email": dist_email,
+                "distributor_type": dist.user_type,
+                "is_active": dist.is_active,
+                "created_at": dist.created_at.isoformat(),
+                "total_accounts_created": len(created_accounts),
+                "single_accounts_count": len(single_accounts),
+                "enterprise_accounts_count": len(enterprise_accounts),
+                "accounts": created_accounts,
+            }
+        )
 
     # Sort by total accounts created (descending)
     distributor_reports.sort(key=lambda x: x["total_accounts_created"], reverse=True)
 
     return {
         "total_distributors": len(distributor_reports),
-        "distributors": distributor_reports
+        "distributors": distributor_reports,
     }
+
 
 @app.get("/api/admin/system-stats")
 def get_system_stats(token: str, db: Session = Depends(get_session)):
@@ -2717,7 +3238,9 @@ def get_system_stats(token: str, db: Session = Depends(get_session)):
     total_single_users = len(db.exec(select(User)).all())
     total_enterprise_admins = len(db.exec(select(EnterpriseAdmin)).all())
     total_sub_accounts = len(db.exec(select(SubAccount)).all())
-    total_distributors = len(db.exec(select(Distributor).where(Distributor.is_active == True)).all())
+    total_distributors = len(
+        db.exec(select(Distributor).where(Distributor.is_active == True)).all()
+    )
     total_licenses = len(db.exec(select(License)).all())
 
     # Count licensed vs unlicensed users
@@ -2725,12 +3248,20 @@ def get_system_stats(token: str, db: Session = Depends(get_session)):
     unlicensed_users = total_single_users - licensed_users
 
     # Count active licenses
-    active_licenses = len(db.exec(select(License).where(License.is_active == True)).all())
+    active_licenses = len(
+        db.exec(select(License).where(License.is_active == True)).all()
+    )
 
     # Get recent activity (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    recent_single_users = len(db.exec(select(User).where(User.created_at >= thirty_days_ago)).all())
-    recent_enterprise_admins = len(db.exec(select(EnterpriseAdmin).where(EnterpriseAdmin.created_at >= thirty_days_ago)).all())
+    recent_single_users = len(
+        db.exec(select(User).where(User.created_at >= thirty_days_ago)).all()
+    )
+    recent_enterprise_admins = len(
+        db.exec(
+            select(EnterpriseAdmin).where(EnterpriseAdmin.created_at >= thirty_days_ago)
+        ).all()
+    )
 
     return {
         "users": {
@@ -2739,21 +3270,19 @@ def get_system_stats(token: str, db: Session = Depends(get_session)):
             "unlicensed": unlicensed_users,
             "total_enterprise_admins": total_enterprise_admins,
             "total_sub_accounts": total_sub_accounts,
-            "total_all_users": total_single_users + total_enterprise_admins + total_sub_accounts
+            "total_all_users": total_single_users
+            + total_enterprise_admins
+            + total_sub_accounts,
         },
-        "licenses": {
-            "total": total_licenses,
-            "active": active_licenses
-        },
-        "distributors": {
-            "total_active": total_distributors
-        },
+        "licenses": {"total": total_licenses, "active": active_licenses},
+        "distributors": {"total_active": total_distributors},
         "recent_activity_30_days": {
             "new_single_users": recent_single_users,
             "new_enterprise_admins": recent_enterprise_admins,
-            "total_new_accounts": recent_single_users + recent_enterprise_admins
-        }
+            "total_new_accounts": recent_single_users + recent_enterprise_admins,
+        },
     }
+
 
 @app.get("/api/admin/profile")
 def get_admin_profile(token: str, db: Session = Depends(get_session)):
@@ -2764,14 +3293,15 @@ def get_admin_profile(token: str, db: Session = Depends(get_session)):
         "email": app_owner.email,
         "full_name": app_owner.full_name,
         "created_at": app_owner.created_at.isoformat(),
-        "last_login": app_owner.last_login.isoformat() if app_owner.last_login else None
+        "last_login": app_owner.last_login.isoformat()
+        if app_owner.last_login
+        else None,
     }
+
 
 @app.post("/api/admin/promote-distributor")
 def promote_distributor(
-    request: DistributorPromoteRequest,
-    token: str,
-    db: Session = Depends(get_session)
+    request: DistributorPromoteRequest, token: str, db: Session = Depends(get_session)
 ):
     """
     Promote a user to distributor role.
@@ -2784,7 +3314,7 @@ def promote_distributor(
     if request.user_type not in ["single", "enterprise_admin", "sub_account"]:
         raise HTTPException(
             status_code=400,
-            detail="Invalid user_type. Must be 'single', 'enterprise_admin', or 'sub_account'"
+            detail="Invalid user_type. Must be 'single', 'enterprise_admin', or 'sub_account'",
         )
 
     # Find user based on type
@@ -2810,21 +3340,19 @@ def promote_distributor(
     if not user_obj:
         raise HTTPException(
             status_code=404,
-            detail=f"User not found with email '{request.email}' for type '{request.user_type}'"
+            detail=f"User not found with email '{request.email}' for type '{request.user_type}'",
         )
 
     # Check if already a distributor
     check_stmt = select(Distributor).where(
-        Distributor.user_id == user_id,
-        Distributor.user_type == request.user_type
+        Distributor.user_id == user_id, Distributor.user_type == request.user_type
     )
     existing = db.exec(check_stmt).first()
 
     if existing:
         if existing.is_active:
             raise HTTPException(
-                status_code=400,
-                detail="User already has an active distributor role"
+                status_code=400, detail="User already has an active distributor role"
             )
         else:
             # Reactivate existing distributor role
@@ -2842,15 +3370,13 @@ def promote_distributor(
                     "user_type": existing.user_type,
                     "email": request.email,
                     "is_active": existing.is_active,
-                    "created_at": existing.created_at.isoformat()
-                }
+                    "created_at": existing.created_at.isoformat(),
+                },
             }
 
     # Create new distributor role
     distributor = Distributor(
-        user_id=user_id,
-        user_type=request.user_type,
-        is_active=True
+        user_id=user_id, user_type=request.user_type, is_active=True
     )
     db.add(distributor)
     db.commit()
@@ -2865,15 +3391,14 @@ def promote_distributor(
             "user_type": distributor.user_type,
             "email": request.email,
             "is_active": distributor.is_active,
-            "created_at": distributor.created_at.isoformat()
-        }
+            "created_at": distributor.created_at.isoformat(),
+        },
     }
+
 
 @app.post("/api/admin/revoke-distributor")
 def revoke_distributor(
-    request: DistributorRevokeRequest,
-    token: str,
-    db: Session = Depends(get_session)
+    request: DistributorRevokeRequest, token: str, db: Session = Depends(get_session)
 ):
     """
     Revoke (deactivate) a distributor role.
@@ -2886,7 +3411,7 @@ def revoke_distributor(
     if request.user_type not in ["single", "enterprise_admin", "sub_account"]:
         raise HTTPException(
             status_code=400,
-            detail="Invalid user_type. Must be 'single', 'enterprise_admin', or 'sub_account'"
+            detail="Invalid user_type. Must be 'single', 'enterprise_admin', or 'sub_account'",
         )
 
     # Find user based on type
@@ -2912,26 +3437,21 @@ def revoke_distributor(
     if not user_obj:
         raise HTTPException(
             status_code=404,
-            detail=f"User not found with email '{request.email}' for type '{request.user_type}'"
+            detail=f"User not found with email '{request.email}' for type '{request.user_type}'",
         )
 
     # Check if user has a distributor role
     check_stmt = select(Distributor).where(
-        Distributor.user_id == user_id,
-        Distributor.user_type == request.user_type
+        Distributor.user_id == user_id, Distributor.user_type == request.user_type
     )
     existing = db.exec(check_stmt).first()
 
     if not existing:
-        raise HTTPException(
-            status_code=404,
-            detail="User is not a distributor"
-        )
+        raise HTTPException(status_code=404, detail="User is not a distributor")
 
     if not existing.is_active:
         raise HTTPException(
-            status_code=400,
-            detail="Distributor role is already inactive"
+            status_code=400, detail="Distributor role is already inactive"
         )
 
     # Revoke distributor role
@@ -2949,16 +3469,17 @@ def revoke_distributor(
             "user_type": existing.user_type,
             "email": request.email,
             "is_active": existing.is_active,
-            "created_at": existing.created_at.isoformat()
-        }
+            "created_at": existing.created_at.isoformat(),
+        },
     }
+
 
 @app.get("/api/admin/all-users")
 def get_all_users(
     token: str,
     user_type: str = "all",
     only_non_distributors: bool = False,
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
 ):
     """
     Get all users across all user types with their distributor status.
@@ -2975,8 +3496,7 @@ def get_all_users(
         for user in single_users:
             # Check if user is a distributor
             dist_stmt = select(Distributor).where(
-                Distributor.user_id == user.id,
-                Distributor.user_type == "single"
+                Distributor.user_id == user.id, Distributor.user_type == "single"
             )
             distributor = db.exec(dist_stmt).first()
 
@@ -2987,15 +3507,17 @@ def get_all_users(
             if only_non_distributors and is_distributor and distributor_active:
                 continue
 
-            all_users.append({
-                "id": user.id,
-                "email": user.email,
-                "user_type": "single",
-                "created_at": user.created_at.isoformat(),
-                "is_distributor": is_distributor,
-                "distributor_active": distributor_active,
-                "license_id": user.license_id
-            })
+            all_users.append(
+                {
+                    "id": user.id,
+                    "email": user.email,
+                    "user_type": "single",
+                    "created_at": user.created_at.isoformat(),
+                    "is_distributor": is_distributor,
+                    "distributor_active": distributor_active,
+                    "license_id": user.license_id,
+                }
+            )
 
     # Query enterprise admins if requested
     if user_type in ["all", "enterprise_admin"]:
@@ -3004,7 +3526,7 @@ def get_all_users(
             # Check if admin is a distributor
             dist_stmt = select(Distributor).where(
                 Distributor.user_id == admin.id,
-                Distributor.user_type == "enterprise_admin"
+                Distributor.user_type == "enterprise_admin",
             )
             distributor = db.exec(dist_stmt).first()
 
@@ -3015,15 +3537,17 @@ def get_all_users(
             if only_non_distributors and is_distributor and distributor_active:
                 continue
 
-            all_users.append({
-                "id": admin.id,
-                "email": admin.email,
-                "user_type": "enterprise_admin",
-                "created_at": admin.created_at.isoformat(),
-                "is_distributor": is_distributor,
-                "distributor_active": distributor_active,
-                "license_id": admin.license_id
-            })
+            all_users.append(
+                {
+                    "id": admin.id,
+                    "email": admin.email,
+                    "user_type": "enterprise_admin",
+                    "created_at": admin.created_at.isoformat(),
+                    "is_distributor": is_distributor,
+                    "distributor_active": distributor_active,
+                    "license_id": admin.license_id,
+                }
+            )
 
     # Query sub-accounts if requested
     if user_type in ["all", "sub_account"]:
@@ -3031,8 +3555,7 @@ def get_all_users(
         for sub in sub_accounts:
             # Check if sub-account is a distributor
             dist_stmt = select(Distributor).where(
-                Distributor.user_id == sub.id,
-                Distributor.user_type == "sub_account"
+                Distributor.user_id == sub.id, Distributor.user_type == "sub_account"
             )
             distributor = db.exec(dist_stmt).first()
 
@@ -3043,20 +3566,19 @@ def get_all_users(
             if only_non_distributors and is_distributor and distributor_active:
                 continue
 
-            all_users.append({
-                "id": sub.id,
-                "email": sub.email,
-                "user_type": "sub_account",
-                "created_at": sub.created_at.isoformat(),
-                "is_distributor": is_distributor,
-                "distributor_active": distributor_active,
-                "admin_id": sub.admin_id
-            })
+            all_users.append(
+                {
+                    "id": sub.id,
+                    "email": sub.email,
+                    "user_type": "sub_account",
+                    "created_at": sub.created_at.isoformat(),
+                    "is_distributor": is_distributor,
+                    "distributor_active": distributor_active,
+                    "admin_id": sub.admin_id,
+                }
+            )
 
     # Sort by creation date (newest first)
     all_users.sort(key=lambda x: x["created_at"], reverse=True)
 
-    return {
-        "total_users": len(all_users),
-        "users": all_users
-    }
+    return {"total_users": len(all_users), "users": all_users}

@@ -19,11 +19,21 @@
 - `PRODUCTION_CHANGES_CHECKLIST.md` - All changes needed
 - `DOCKER_DEPLOYMENT.md` - General Docker guide
 
+## Domain Configuration
+
+**IMPORTANT:** Set `APP_DOMAIN` in `.env.production` to configure your domain. All URLs are automatically derived from this single variable.
+
+Examples:
+- `APP_DOMAIN=https://app.card2contacts.com`
+- `APP_DOMAIN=https://dev.card2contacts.com`
+
 ## Deployment URLs
 
-- **Main App:** https://app.card2contacts.com
-- **Admin Panel:** https://app.card2contacts.com/admin.html
-- **API Docs:** https://app.card2contacts.com/api/docs
+Replace `your-domain.com` with the domain you set in `APP_DOMAIN`:
+
+- **Main App:** https://your-domain.com
+- **Admin Panel:** https://your-domain.com/admin.html
+- **API Docs:** https://your-domain.com/api/docs
 
 ## Quick Deploy (5 Steps)
 
@@ -50,10 +60,12 @@ git clone <your-repo-url> .
 ### 3. Get SSL Certificate:
 ```bash
 sudo apt install certbot
-sudo certbot certonly --standalone -d app.card2contacts.com
+# Replace your-domain.com with your actual domain
+sudo certbot certonly --standalone -d your-domain.com
 sudo mkdir -p certs
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/fullchain.pem certs/
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/privkey.pem certs/
+# Replace your-domain.com with your actual domain
+sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem certs/
+sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem certs/
 sudo chown $USER:$USER certs/*
 ```
 
@@ -64,9 +76,10 @@ nano .env.production.local
 ```
 
 **Critical to update:**
+- `APP_DOMAIN` - Set your production domain (e.g., `https://app.card2contacts.com`)
 - `POSTGRES_PASSWORD` (generate: `openssl rand -base64 32`)
 - `SECRET_KEY` (generate: `openssl rand -hex 32`)
-- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (configure for your domain)
 - `GROQ_API_KEY` and `MISTRAL_API_KEY`
 - SMTP credentials
 
@@ -80,13 +93,13 @@ docker-compose -f docker-compose.production.yml exec backend python create_app_o
 ## Production Changes Summary
 
 **Updated from Development:**
-- ✅ Domain: `https://192.168.29.234.sslip.io:8000` → `https://app.card2contacts.com`
+- ✅ Domain: Set `APP_DOMAIN` in .env.production (e.g., `https://app.card2contacts.com`)
 - ✅ Environment: `development` → `production`
 - ✅ Console logs: `enabled` → `disabled`
 - ✅ Error reporting: `disabled` → `enabled`
 - ✅ SSL: `none` → `full TLS/HTTPS`
 - ✅ Database: `exposed` → `localhost only`
-- ✅ CORS: `*` wildcard → `https://app.card2contacts.com`
+- ✅ CORS: `*` wildcard → restricted to your domain (derived from APP_DOMAIN)
 
 **Key Features:**
 - Frontend served on `/` → `index.html`
@@ -113,10 +126,11 @@ docker-compose -f docker-compose.production.yml exec backend python create_app_o
 
 ## Security Checklist
 
+- [ ] `APP_DOMAIN` set to your production domain
 - [ ] Strong `POSTGRES_PASSWORD` generated
 - [ ] Strong `SECRET_KEY` generated
-- [ ] SSL certificates obtained
-- [ ] Google OAuth configured for `app.card2contacts.com`
+- [ ] SSL certificates obtained for your domain
+- [ ] Google OAuth configured for your domain (redirect URI: `https://your-domain.com/api/auth/google/callback`)
 - [ ] API keys obtained (Groq, Mistral)
 - [ ] Firewall configured (only 80, 443 open)
 - [ ] Database port only on localhost
@@ -152,8 +166,9 @@ docker-compose -f docker-compose.production.yml ps
 **Can't access SSL:**
 ```bash
 sudo certbot renew --force-renewal
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/fullchain.pem certs/
-sudo cp /etc/letsencrypt/live/app.card2contacts.com/privkey.pem certs/
+# Replace your-domain.com with your actual domain
+sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem certs/
+sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem certs/
 docker-compose -f docker-compose.production.yml restart frontend
 ```
 
@@ -176,4 +191,6 @@ docker-compose -f docker-compose.production.yml up -d
 1. Read `UBUNTU_DEPLOYMENT_GUIDE.md` for detailed instructions
 2. Review `PRODUCTION_CHANGES_CHECKLIST.md` for all changes
 3. Follow the 5-step quick deploy above
-4. Verify deployment at https://app.card2contacts.com
+4. Verify deployment at your domain (replace with your actual domain):
+   - Main app: https://your-domain.com
+   - Admin panel: https://your-domain.com/admin.html

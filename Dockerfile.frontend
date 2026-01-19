@@ -1,8 +1,21 @@
 # Frontend Dockerfile
 FROM nginx:alpine
 
-# Copy static files to nginx html directory
-COPY frontend/ /usr/share/nginx/html/
+# Install envsubst for variable substitution during build
+RUN apk add --no-cache gettext
+
+# Copy frontend files to temp directory
+COPY frontend/ /tmp/frontend/
+
+# Accept APP_DOMAIN as build argument (default: app.card2contacts.com)
+ARG APP_DOMAIN=app.card2contacts.com
+
+# Substitute ${APP_DOMAIN} in config.js with actual domain value
+RUN envsubst '$APP_DOMAIN' < /tmp/frontend/config.js > /tmp/config.js && \
+    mv /tmp/config.js /tmp/frontend/config.js
+
+# Copy all frontend files to nginx html directory
+RUN cp -r /tmp/frontend/* /usr/share/nginx/html/
 
 # Copy nginx configuration (supports build arg for different configs)
 ARG NGINX_CONF=nginx.conf
