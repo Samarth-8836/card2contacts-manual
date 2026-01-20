@@ -79,15 +79,15 @@ input, textarea { user-select: text; }
        Width: Narrower (70% of screen width)
        Max Width: Cap at 350px to look like a phone holding a card
     */
-    width: 70vw;
-    max-width: 350px;
+    width: calc(70vw * 1.58);
+    max-width: calc(350px * 1.58);
     
     /* 
        Height: Taller
        Calculate height based on aspect ratio (Width * 1.58)
     */
-    height: calc(70vw * 1.58);
-    max-height: calc(350px * 1.58);
+    height: 70vw; 
+    max-height: 350px; 
 
     /* 
        THE DARK OVERLAY
