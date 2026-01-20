@@ -50,70 +50,79 @@ input, textarea { user-select: text; }
 
 #capture-canvas { display: none; }
 
-/* Alignment Guide Overlay */
+/* =============================================================================
+   REPLACEMENT: Alignment Guide (Landscape Cutout)
+   ============================================================================= */
+
 #alignment-guide {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
     z-index: 1;
     pointer-events: none;
-    overflow: hidden; /* Important for the box-shadow technique */
+    overflow: hidden; /* Prevents the massive border from causing scrollbars */
 }
 
-/* The Cutout Frame */
-.guide-frame {
+/* 
+   The Mask Container 
+   This centers the frame in the middle of the screen
+*/
+.guide-mask {
     position: absolute;
-    /* Center horizontally, but position slightly higher than vertical center (45%)
-       This usually feels more natural for holding a phone camera */
-    top: 45%; 
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-
-    /* LANDSCAPE DIMENSIONS */
-    width: 85vw;            /* 85% of screen width */
-    max-width: 480px;       /* Cap width for tablets/desktop */
-    aspect-ratio: 1.58 / 1; /* Standard Business Card Ratio (ISO 7810 ID-1) */
-    
-    border-radius: 12px;
-
-    /* THE CUTOUT MAGIC */
-    /* 1. Transparent background ensures the camera is visible inside */
-    background: transparent;
-    
-    /* 2. Massive dark shadow creates the overlay everywhere OUTSIDE the frame */
-    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.85);
-    
-    /* 3. Outer Glow for visibility */
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Inner Dashed Border */
+/* 
+   The Cutout Frame 
+   1. We set explicit LANDSCAPE dimensions (Wider than it is tall).
+   2. We use a massive border to create the dark overlay around it.
+*/
+.guide-frame {
+    position: relative;
+    box-sizing: content-box; /* Important so border adds to outside */
+    
+    /* LANDSCAPE DIMENSIONS */
+    /* Width is 85% of screen width, maxing out at 500px for tablets */
+    width: 85vw; 
+    max-width: 500px;
+    
+    /* Height calculated for Business Card Ratio (approx 1.75) */
+    /* width / 1.75 = height */
+    height: calc(85vw / 1.75); 
+    max-height: calc(500px / 1.75);
+
+    background: transparent; /* The "Hole" */
+    
+    /* THE DARK OVERLAY TRICK: 
+       A massive translucent border creates the dark overlay 
+       everywhere except inside this div. 
+    */
+    border: 4000px solid rgba(0, 0, 0, 0.85); 
+    
+    /* Optional: Green glow to indicate active area */
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.5); 
+    border-radius: 8px;
+}
+
+/* The Dotted Line Inside */
 .guide-border {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    border: 2px dashed rgba(255, 255, 255, 0.5);
-    border-radius: 12px;
-    opacity: 0.7;
-    box-sizing: border-box;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: 2px dashed rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    pointer-events: none;
 }
 
-/* Corner Accents (Green L-brackets) */
-.guide-frame .corner {
-    position: absolute;
-    width: 20px; height: 20px;
-    border-color: var(--accent); /* Uses your existing Green variable */
-    border-style: solid;
-    border-width: 0;
-    transition: all 0.3s ease;
-}
-
-.guide-frame .corner.tl { top: -1px; left: -1px; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: 12px; }
-.guide-frame .corner.tr { top: -1px; right: -1px; border-top-width: 4px; border-right-width: 4px; border-top-right-radius: 12px; }
-.guide-frame .corner.bl { bottom: -1px; left: -1px; border-bottom-width: 4px; border-left-width: 4px; border-bottom-left-radius: 12px; }
-.guide-frame .corner.br { bottom: -1px; right: -1px; border-bottom-width: 4px; border-right-width: 4px; border-bottom-right-radius: 12px; }
-
-/* Remove old class definitions if they exist to keep file clean */
-.guide-dim { display: none; }
+/* 
+   CLEANUP: 
+   Hide old classes if they still exist in your HTML to prevent conflicts 
+*/
+.guide-dim { display: none !important; }
 
 /* =============================================================================
    2.5. LAYER 1.5: VISUAL EFFECTS (FLASH & ANIMATION)
