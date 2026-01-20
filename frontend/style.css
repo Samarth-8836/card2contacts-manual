@@ -57,12 +57,6 @@ input, textarea { user-select: text; }
     width: 100%; height: 100%;
     z-index: 1;
     pointer-events: none;
-    
-    /* Define the cutout dimensions as CSS variables for reuse */
-    --cutout-width: min(75vw, 400px); /* Width of the vertical card */
-    --cutout-height: calc(var(--cutout-width) * 1.75); /* Height is 1.75x width for vertical card */
-    --cutout-left: calc(50% - var(--cutout-width) / 2); /* Left position (centered) */
-    --cutout-top: calc(50% - var(--cutout-height) / 2); /* Top position (centered) */
 }
 
 /* Semi-transparent dimming layers - creates the dark overlay around the cutout */
@@ -71,36 +65,53 @@ input, textarea { user-select: text; }
     background: rgba(0, 0, 0, 0.75);
 }
 
-/* Top overlay - covers from top to the cutout area */
+/* 
+   Card dimensions for vertical orientation:
+   - Width: 70vw (max 350px) 
+   - Height: width * 1.75 for vertical business card
+   - Centered on screen
+*/
+
+/* Top overlay - covers from screen top to card top */
 .guide-dim.top {
     top: 0; 
     left: 0;
     width: 100%; 
-    height: var(--cutout-top);
+    /* Height: from top to where card starts (50% - half of card height) */
+    height: calc(50vh - min(70vw * 1.75, 612px) / 2);
 }
 
-/* Bottom overlay - covers from cutout area to bottom */
+/* Bottom overlay - covers from card bottom to screen bottom */
 .guide-dim.bottom {
-    top: calc(var(--cutout-top) + var(--cutout-height));
+    /* Start where card ends (50% + half of card height) */
+    top: calc(50vh + min(70vw * 1.75, 612px) / 2);
     left: 0;
     width: 100%; 
-    height: calc(100% - var(--cutout-top) - var(--cutout-height));
+    /* Fill remaining space to bottom */
+    bottom: 0;
 }
 
-/* Left overlay - covers the left side of the cutout area */
+/* Left overlay - covers left side at card height */
 .guide-dim.left {
-    top: var(--cutout-top);
+    /* Align with card top */
+    top: calc(50vh - min(70vw * 1.75, 612px) / 2);
     left: 0;
-    width: var(--cutout-left);
-    height: var(--cutout-height);
+    /* Width: from left edge to where card starts (50% - half of card width) */
+    width: calc(50vw - min(70vw, 350px) / 2);
+    /* Match card height */
+    height: min(70vw * 1.75, 612px);
 }
 
-/* Right overlay - covers the right side of the cutout area */
+/* Right overlay - covers right side at card height */
 .guide-dim.right {
-    top: var(--cutout-top);
-    left: calc(var(--cutout-left) + var(--cutout-width));
-    width: calc(100% - var(--cutout-left) - var(--cutout-width));
-    height: var(--cutout-height);
+    /* Align with card top */
+    top: calc(50vh - min(70vw * 1.75, 612px) / 2);
+    /* Start where card ends (50% + half of card width) */
+    left: calc(50vw + min(70vw, 350px) / 2);
+    /* Fill remaining space to right edge */
+    right: 0;
+    /* Match card height */
+    height: min(70vw * 1.75, 612px);
 }
 
 /* Center frame for card alignment - VERTICAL business card shape */
@@ -109,8 +120,8 @@ input, textarea { user-select: text; }
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: var(--cutout-width);
-    height: var(--cutout-height);
+    width: min(70vw, 350px);
+    height: min(70vw * 1.75, 612px);
     border: 3px solid rgba(76, 175, 80, 0.8); /* Green border */
     border-radius: 12px;
     box-shadow: 

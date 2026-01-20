@@ -85,7 +85,7 @@ def create_admin(email: str, password: str, license_key: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Create an enterprise admin account for DigiCard"
+        description="Create an enterprise admin account for Card2Contacts"
     )
     parser.add_argument(
         "--email", "-e",

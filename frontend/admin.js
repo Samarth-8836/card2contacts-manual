@@ -1,5 +1,5 @@
 // Admin Dashboard JavaScript
-// DigiCard App Owner Dashboard
+// Card2Contacts App Owner Dashboard
 
 // State management
 const state = {

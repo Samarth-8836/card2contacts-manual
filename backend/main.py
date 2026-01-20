@@ -2304,7 +2304,7 @@ def export_contacts(token: str, db: Session = Depends(get_session)):
             io.BytesIO(file_data),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
-                "Content-Disposition": "attachment; filename=DigiCard_Contacts.xlsx"
+                "Content-Disposition": "attachment; filename=Card2Contacts_Contacts.xlsx"
             },
         )
     except HttpError as e:

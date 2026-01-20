@@ -93,7 +93,7 @@ CONFIG.isFeatureEnabled = function(featureName) {
  */
 CONFIG.log = function(...args) {
     if (this.ENABLE_CONSOLE_LOGS) {
-        console.log('[DigiCard]', ...args);
+        console.log('[Card2Contacts]', ...args);
     }
 };
 
@@ -103,7 +103,7 @@ CONFIG.log = function(...args) {
  */
 CONFIG.logError = function(...args) {
     if (this.ENABLE_CONSOLE_LOGS) {
-        console.error('[DigiCard Error]', ...args);
+        console.error('[Card2Contacts Error]', ...args);
     }
 
     // If error reporting is enabled, send to error reporting service

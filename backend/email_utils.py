@@ -1,5 +1,5 @@
 """
-Email Utility Module for DigiCard Enterprise
+Email Utility Module for Card2Contacts Enterprise
 Handles SMTP email sending for OTP verification and password reset.
 """
 
@@ -71,7 +71,7 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
     Returns:
         True if email sent successfully, False otherwise
     """
-    subject = "Your DigiCard Login Verification Code"
+    subject = "Your Card2Contacts Login Verification Code"
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -89,7 +89,7 @@ def send_otp_email(to_email: str, otp_code: str) -> bool:
             <p>Your one-time verification code is:</p>
             <div class="otp-code">{otp_code}</div>
             <p class="warning">This code expires in 5 minutes. If you did not request this code, please ignore this email.</p>
-            <p>- DigiCard Team</p>
+            <p>- Card2Contacts Team</p>
         </div>
     </body>
     </html>
@@ -108,7 +108,7 @@ def send_password_reset_email(to_email: str, new_password: str) -> bool:
     Returns:
         True if email sent successfully, False otherwise
     """
-    subject = "Your DigiCard Password Has Been Reset"
+    subject = "Your Card2Contacts Password Has Been Reset"
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -127,7 +127,7 @@ def send_password_reset_email(to_email: str, new_password: str) -> bool:
             <div class="password">{new_password}</div>
             <p>Please use this password to log in. You will be prompted to change your password after verification.</p>
             <p class="warning">If you did not request this password reset, please contact support immediately.</p>
-            <p>- DigiCard Team</p>
+            <p>- Card2Contacts Team</p>
         </div>
     </body>
     </html>
@@ -149,7 +149,7 @@ def send_account_credentials_email(to_email: str, username: str, password: str, 
         True if email sent successfully, False otherwise
     """
     account_type_display = "Single User" if account_type == "single" else "Enterprise Admin"
-    subject = "Welcome to DigiCard - Your Account Credentials"
+    subject = "Welcome to Card2Contacts - Your Account Credentials"
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -166,7 +166,7 @@ def send_account_credentials_email(to_email: str, username: str, password: str, 
     </head>
     <body>
         <div class="container">
-            <h2>Welcome to DigiCard!</h2>
+            <h2>Welcome to Card2Contacts!</h2>
             <p>Your {account_type_display} account has been created. Here are your login credentials:</p>
             <div class="credentials">
                 <div class="credential-item">
@@ -184,7 +184,7 @@ def send_account_credentials_email(to_email: str, username: str, password: str, 
             </div>
             <p>You can login using either your username or email.</p>
             <p class="warning">For security, you will be required to change your password on your first login.</p>
-            <p>- DigiCard Team</p>
+            <p>- Card2Contacts Team</p>
         </div>
     </body>
     </html>
@@ -204,7 +204,7 @@ def send_sub_account_otp_email(admin_email: str, sub_username: str, otp_code: st
     Returns:
         True if email sent successfully, False otherwise
     """
-    subject = f"DigiCard Sub-Account Login Code - {sub_username}"
+    subject = f"Card2Contacts Sub-Account Login Code - {sub_username}"
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -227,7 +227,7 @@ def send_sub_account_otp_email(admin_email: str, sub_username: str, otp_code: st
             <div class="otp-code">{otp_code}</div>
             <p class="warning">This code expires in 5 minutes. Share this code with your sub-account user to complete their login.</p>
             <p>If this login was not expected, you may want to change the sub-account's password.</p>
-            <p>- DigiCard Team</p>
+            <p>- Card2Contacts Team</p>
         </div>
     </body>
     </html>
@@ -267,7 +267,7 @@ def send_distributor_contact_request_email(user_email: str, username: str) -> bo
         <div class="container">
             <h2>New License Purchase Request</h2>
             <div class="highlight">
-                <strong>A user has requested a callback to purchase a DigiCard license.</strong>
+                <strong>A user has requested a callback to purchase a Card2Contacts license.</strong>
             </div>
             <div class="user-info">
                 <div class="info-item">
@@ -280,7 +280,7 @@ def send_distributor_contact_request_email(user_email: str, username: str) -> bo
                 </div>
             </div>
             <p><strong>Action Required:</strong> Please contact this user to discuss their license requirements and complete the purchase process.</p>
-            <p>- DigiCard System</p>
+            <p>- Card2Contacts System</p>
         </div>
     </body>
     </html>

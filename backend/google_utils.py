@@ -26,9 +26,9 @@ SCOPES = [
 ]
 
 INTERNAL_FOLDER_NAME = ".Digital_Business_Card_Scanner_Internal_Data"
-BULK_IMAGES_FOLDER = "DigiCard_Bulk_Temp_Images"
+BULK_IMAGES_FOLDER = "Card2Contacts_Bulk_Temp_Images"
 TEMPLATE_ATTACHMENTS_FOLDER = "Email_Template_Attachments"
-SHEET_FILENAME = "DigiCard_Contacts"
+SHEET_FILENAME = "Card2Contacts_Contacts"
 TEMPLATE_SHEET_NAME = "Email_Templates"
 STAGING_SHEET_NAME = "Not_Submitted_Bulk"
 QUEUE_SHEET_NAME = "Bulk_Submitted"
@@ -65,7 +65,7 @@ def handle_google_api_error(e: HttpError, context: str = "operation"):
         if "insufficientPermissions" in error_msg or "insufficient_scope" in error_msg:
              raise HTTPException(
                  status_code=403, 
-                 detail="DigiCard lacks permission to access Drive or Sheets. Please Re-link and ensure all checkboxes are checked."
+                 detail="Card2Contacts lacks permission to access Drive or Sheets. Please Re-link and ensure all checkboxes are checked."
              )
         if "usageLimits" in error_msg:
              raise HTTPException(status_code=429, detail="Google API usage limit exceeded. Please try again later.")
@@ -1328,7 +1328,7 @@ def export_sheet_as_excel(admin: EnterpriseAdmin, db: Session, sheet_name: Optio
                 fileId=admin.google_spreadsheet_id,
                 mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             ).execute()
-            return file_data, "DigiCard_All_Contacts.xlsx"
+            return file_data, "Card2Contacts_All_Contacts.xlsx"
 
     except HttpError as e:
         handle_google_api_error(e, "Exporting Sheet")
@@ -1413,6 +1413,6 @@ def export_combined_contacts(admin: EnterpriseAdmin, sub_accounts: List[SubAccou
         except:
             pass  # If cleanup fails, it's okay - temp files will be cleaned up eventually
 
-        return file_data, "DigiCard_Combined_All_Users.xlsx"
+        return file_data, "Card2Contacts_Combined_All_Users.xlsx"
     except HttpError as e:
         handle_google_api_error(e, "Exporting Combined Contacts")

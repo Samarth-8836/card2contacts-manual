@@ -1,5 +1,5 @@
 /**
- * DIGICARD APP LOGIC
+ * Card2Contacts APP LOGIC
  * Version: Production Ready (Phase 6 - Optimization & UI Polish)
  * Updates:
  * - Added Business Category field support (VCF + Sheet)
@@ -602,7 +602,7 @@ function setupEventListeners() {
             if (handleGoogleError(res)) return; // Check for 403
 
             if (res.status === 410) {
-                showAlert("File Not Found", "The 'DigiCard_Contacts' sheet was deleted or moved from your Google Drive.");
+                showAlert("File Not Found", "The 'Card2Contacts_Contacts' sheet was deleted or moved from your Google Drive.");
                 return;
             }
             if (!res.ok) throw new Error("Server error during export.");
@@ -610,7 +610,7 @@ function setupEventListeners() {
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = "DigiCard_Contacts.xlsx"; document.body.appendChild(a); a.click(); a.remove();
+            a.href = url; a.download = "Card2Contacts_Contacts.xlsx"; document.body.appendChild(a); a.click(); a.remove();
         } catch (e) {
             showAlert("Export Failed", "We couldn't download your contacts.\nDetails: " + friendlyError(e));
         } finally { hideSpinner(); }
@@ -2445,7 +2445,7 @@ async function exportAllCombined() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = "DigiCard_Combined_All_Users.xlsx";
+        a.download = "Card2Contacts_Combined_All_Users.xlsx";
         document.body.appendChild(a);
         a.click();
         a.remove();

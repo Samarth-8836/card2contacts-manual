@@ -1,5 +1,5 @@
 """
-OCR abstraction layer for DigiCard Enterprise
+OCR abstraction layer for Card2Contacts Enterprise
 
 This module provides a clean abstraction for OCR services, allowing easy
 switching between providers (Mistral, Fallback) from a single configuration point.

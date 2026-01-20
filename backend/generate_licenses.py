@@ -61,7 +61,7 @@ def generate_licenses(count: int, license_type: str, max_sub_accounts: int = 1) 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate license keys for DigiCard (single or enterprise)"
+        description="Generate license keys for Card2Contacts (single or enterprise)"
     )
     parser.add_argument(
         "--count", "-c",
