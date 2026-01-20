@@ -71,7 +71,6 @@ input, textarea { user-select: text; }
 .guide-frame {
     /* YOUR SPECIFIED VALUES */
     width: 80%;
-    max-width: 200px;
     aspect-ratio: 1 / 1.75;
     margin: 0 0 25% 0; /* Pushes the frame up slightly */
 
