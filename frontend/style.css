@@ -51,65 +51,37 @@ input, textarea { user-select: text; }
 #capture-canvas { display: none; }
 
 /* =============================================================================
-   Alignment Guide: Bound strictly between Top and Bottom UI
+   Alignment Guide (Portrait Overlay)
    ============================================================================= */
 
 #alignment-guide {
     position: fixed;
-    left: 0; 
-    width: 100%;
-    
-    /* 
-       1. VERTICAL BOUNDARIES
-       We anchor the guide container specifically between the UI elements.
-       
-       Top: ~80px clears the top bar (60px height + padding + safe area)
-       Bottom: ~240px clears shutter (76px), switcher (40px), gaps & safe area
-    */
-    top: calc(80px + env(safe-area-inset-top)); 
-    bottom: calc(240px + env(safe-area-inset-bottom));
-    
-    /* 
-       2. CENTERING
-       We use Flexbox to center the frame inside this specific "safe zone".
-    */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     z-index: 2;
     pointer-events: none;
-    /* Note: We do NOT use overflow:hidden here, so the shadow can cover the UI bars */
+    overflow: hidden;
+    
+    /* key change: Use Flexbox to center, so margins work */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .guide-frame {
-    /* 
-       3. SIZING LOGIC
-       - Width: Try to be 80% of screen.
-       - Max-Width: Cap at 400px (tablet/desktop).
-       - Max-Height: CRITICAL. Never exceed 100% of the container (the safe zone).
-    */
+    /* YOUR SPECIFIED VALUES */
     width: 80%;
-    max-width: 400px;
-    max-height: 100%; 
-    
-    /* 
-       4. ASPECT RATIO
-       Standard Portrait Card.
-       If max-height kicks in (on small screens), this ratio forces width to shrink.
-    */
+    max-width: 200px;
     aspect-ratio: 1 / 1.75;
+    margin: 0 0 25% 0; /* Pushes the frame up slightly */
 
-    /* 
-       5. THE OVERLAY SHADOW
-       The shadow extends infinitely to darken the rest of the screen.
-    */
+    /* The Overlay Logic */
     box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.75);
     background: transparent;
     border-radius: 12px;
+    
+    /* Position relative ensures the dotted border inside stays aligned */
     position: relative;
-    box-sizing: border-box;
 }
 
 /* The Dotted Guide Line */
