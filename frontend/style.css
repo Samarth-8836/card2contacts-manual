@@ -75,30 +75,29 @@ input, textarea { user-select: text; }
     transform: translate(-50%, -50%);
 
     /* 
-       FORCE LANDSCAPE DIMENSIONS 
-       Width is 90% of screen, capped at 600px 
+       PORTRAIT DIMENSIONS (Rotated 90deg)
+       Width: Narrower (70% of screen width)
+       Max Width: Cap at 350px to look like a phone holding a card
     */
-    width: 90vw;
-    max-width: 600px;
+    width: 70vw;
+    max-width: 350px;
     
     /* 
-       CALCULATE HEIGHT BASED ON ASPECT RATIO
-       Standard Business Card is 1.58:1 ratio. 
-       Height = Width / 1.58
+       Height: Taller
+       Calculate height based on aspect ratio (Width * 1.58)
     */
-    height: calc(90vw / 1.58);
-    max-height: calc(600px / 1.58);
+    height: calc(70vw * 1.58);
+    max-height: calc(350px * 1.58);
 
     /* 
        THE DARK OVERLAY
-       We use a massive box-shadow to darken everything OUTSIDE this box.
-       0px offset, 0px blur, 0px spread, 5000px size
+       Massive shadow darkens everything outside the portrait frame
     */
     box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.75); 
     
     background: transparent; /* Keep center clear */
     border-radius: 12px;
-    box-sizing: border-box; /* Ensure padding/borders don't break math */
+    box-sizing: border-box;
 }
 
 /* The Dotted Guide Line */
