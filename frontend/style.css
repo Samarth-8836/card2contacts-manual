@@ -54,75 +54,67 @@ input, textarea { user-select: text; }
    REPLACEMENT: Alignment Guide (Landscape Cutout)
    ============================================================================= */
 
+/* =============================================================================
+   FIXED: Alignment Guide (Landscape Cutout)
+   ============================================================================= */
+
 #alignment-guide {
-    position: absolute;
+    position: fixed; /* Fixed ensures it stays put regardless of scroll */
     top: 0; left: 0;
     width: 100%; height: 100%;
-    z-index: 1;
-    pointer-events: none;
-    overflow: hidden; /* Prevents the massive border from causing scrollbars */
+    z-index: 2; /* Layer 2: Above video (0), below HUD (10) */
+    pointer-events: none; /* Let clicks pass through */
+    overflow: hidden;
 }
 
-/* 
-   The Mask Container 
-   This centers the frame in the middle of the screen
-*/
-.guide-mask {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* 
-   The Cutout Frame 
-   1. We set explicit LANDSCAPE dimensions (Wider than it is tall).
-   2. We use a massive border to create the dark overlay around it.
-*/
 .guide-frame {
-    position: relative;
-    box-sizing: content-box; /* Important so border adds to outside */
-    
-    /* LANDSCAPE DIMENSIONS */
-    /* Width is 85% of screen width, maxing out at 500px for tablets */
-    width: 85vw; 
-    max-width: 500px;
-    
-    /* Height calculated for Business Card Ratio (approx 1.75) */
-    /* width / 1.75 = height */
-    height: calc(85vw / 1.75); 
-    max-height: calc(500px / 1.75);
+    position: absolute;
+    /* Center exactly */
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
 
-    background: transparent; /* The "Hole" */
-    
-    /* THE DARK OVERLAY TRICK: 
-       A massive translucent border creates the dark overlay 
-       everywhere except inside this div. 
+    /* 
+       FORCE LANDSCAPE DIMENSIONS 
+       Width is 90% of screen, capped at 600px 
     */
-    border: 4000px solid rgba(0, 0, 0, 0.85); 
+    width: 90vw;
+    max-width: 600px;
     
-    /* Optional: Green glow to indicate active area */
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.5); 
-    border-radius: 8px;
+    /* 
+       CALCULATE HEIGHT BASED ON ASPECT RATIO
+       Standard Business Card is 1.58:1 ratio. 
+       Height = Width / 1.58
+    */
+    height: calc(90vw / 1.58);
+    max-height: calc(600px / 1.58);
+
+    /* 
+       THE DARK OVERLAY
+       We use a massive box-shadow to darken everything OUTSIDE this box.
+       0px offset, 0px blur, 0px spread, 5000px size
+    */
+    box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.75); 
+    
+    background: transparent; /* Keep center clear */
+    border-radius: 12px;
+    box-sizing: border-box; /* Ensure padding/borders don't break math */
 }
 
-/* The Dotted Line Inside */
+/* The Dotted Guide Line */
 .guide-border {
     position: absolute;
-    top: 0; left: 0;
+    top: 0; left: 0; 
     width: 100%; height: 100%;
-    border: 2px dashed rgba(255, 255, 255, 0.6);
-    border-radius: 6px;
-    pointer-events: none;
+    border: 2px dashed rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    
+    /* Add a slight glow to the border so it's visible against dark/light backgrounds */
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
-/* 
-   CLEANUP: 
-   Hide old classes if they still exist in your HTML to prevent conflicts 
-*/
-.guide-dim { display: none !important; }
+/* Remove any old classes to be safe */
+.guide-dim, .guide-mask { display: none !important; }
 
 /* =============================================================================
    2.5. LAYER 1.5: VISUAL EFFECTS (FLASH & ANIMATION)
