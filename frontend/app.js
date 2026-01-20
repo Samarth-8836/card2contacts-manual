@@ -1119,11 +1119,54 @@ function stopCamera() {
     }
 }
 
+function applySharpening(canvas) {
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const kernel = [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0];
+    const kSize = 3;
+    const half = Math.floor(kSize / 2);
+
+    const original = new Uint8ClampedArray(data);
+
+    for (let y = half; y < height - half; y++) {
+        for (let x = half; x < width - half; x++) {
+            let r = 0, g = 0, b = 0;
+
+            for (let ky = 0; ky < kSize; ky++) {
+                for (let kx = 0; kx < kSize; kx++) {
+                    const px = x + kx - half;
+                    const py = y + ky - half;
+                    const idx = (py * width + px) * 4;
+                    const k = kernel[ky * kSize + kx];
+
+                    r += original[idx] * k;
+                    g += original[idx + 1] * k;
+                    b += original[idx + 2] * k;
+                }
+            }
+
+            const idx = (y * width + x) * 4;
+            data[idx] = Math.min(255, Math.max(0, r));
+            data[idx + 1] = Math.min(255, Math.max(0, g));
+            data[idx + 2] = Math.min(255, Math.max(0, b));
+        }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
 function captureFrame() {
     const ctx = els.canvas.getContext('2d');
     els.canvas.width = els.video.videoWidth;
     els.canvas.height = els.video.videoHeight;
     ctx.drawImage(els.video, 0, 0);
+
+    applySharpening(els.canvas);
+
     return new Promise(resolve => els.canvas.toBlob(resolve, 'image/jpeg', 0.9));
 }
 
