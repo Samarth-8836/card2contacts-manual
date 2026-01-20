@@ -79,6 +79,7 @@ from backend.google_utils import (
     check_staging_count_for_user,
     submit_bulk_session,
     submit_bulk_session_sub_account,
+    force_text,
     clear_staging_data,
     clear_staging_data_sub_account,
     check_staging_count,
@@ -2177,16 +2178,16 @@ def save_contact_to_google(
     # Build contact row data
     cat_str = ", ".join(contact.cat) if contact.cat else ""
     row_data = [
-        ", ".join(contact.fn),
-        contact.org,
-        ", ".join(contact.tel),
-        contact.title,
-        ", ".join(contact.email),
-        ", ".join(contact.url),
-        ", ".join(contact.adr),
-        "General",
-        cat_str,
-        contact.notes,
+        force_text(", ".join(contact.fn)),
+        force_text(contact.org),
+        force_text(", ".join(contact.tel)),
+        force_text(contact.title),
+        force_text(", ".join(contact.email)),
+        force_text(", ".join(contact.url)),
+        force_text(", ".join(contact.adr)),
+        force_text("General"),
+        force_text(cat_str),
+        force_text(contact.notes),
     ]
 
     try:
