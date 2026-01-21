@@ -63,12 +63,35 @@ try {
     # Pre-flight checks
     Write-Log "Running pre-flight checks..."
     
-    # Check SSH key file exists
-    if (-not (Test-Path $SSHKeyPath)) {
+    # Check SSH key file exists (must be a file, not directory)
+    if (-not (Test-Path -Path $SSHKeyPath -PathType Leaf)) {
         Write-Log "ERROR: SSH key file not found at: $SSHKeyPath" "ERROR"
+        Write-Log "Please provide the full path to the SSH key FILE (e.g., D:\path\key.pem), not the directory containing it." "ERROR"
         exit 1
     }
-    Write-Log "SSH key file verified"
+    Write-Log "SSH key file verified: $SSHKeyPath"
+    
+    # Fix SSH key permissions automatically
+    Write-Log "Fixing SSH key permissions..."
+    Write-Log "SSH key path to fix: $SSHKeyPath"
+    
+    # Convert to absolute path
+    try {
+        $SSHKeyPath = Resolve-Path -Path $SSHKeyPath -ErrorAction Stop
+        Write-Log "Resolved absolute path: $SSHKeyPath"
+    } catch {
+        Write-Log "ERROR: Failed to resolve path: $($_.Exception.Message)" "ERROR"
+        exit 1
+    }
+    
+    . "$PSScriptRoot\fix-ssh-permissions.ps1" | Out-Null
+    $permissionFixed = Fix-SSHKeyPermissions -KeyPath $SSHKeyPath -Silent $true
+    
+    if (-not $permissionFixed) {
+        Write-Log "ERROR: Failed to fix SSH key permissions. Try running as Administrator." "ERROR"
+        exit 1
+    }
+    Write-Log "SSH key permissions fixed successfully" "SUCCESS"
     
     # Check OpenSSH availability
     $sshExists = Get-Command ssh -ErrorAction SilentlyContinue
