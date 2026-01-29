@@ -223,6 +223,7 @@ class ContactSave(BaseModel):
     adr: list = []
     cat: list = []  # Added Business Category
     notes: str = ""
+    import_source: str = "General"
 
 
 class TemplateCreate(BaseModel):
@@ -2185,7 +2186,7 @@ def save_contact_to_google(
         force_text(", ".join(contact.email)),
         force_text(", ".join(contact.url)),
         force_text(", ".join(contact.adr)),
-        force_text("General"),
+        force_text(contact.import_source),
         force_text(cat_str),
         force_text(contact.notes),
     ]
