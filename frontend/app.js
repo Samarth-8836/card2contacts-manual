@@ -520,7 +520,15 @@ function setupEventListeners() {
     });
 
     // --- AUTH & OVERLAYS ---
-    els.manualEntryBtn.addEventListener('click', openManualEntry);
+    if (els.manualEntryBtn) {
+        console.log('Setting up manual entry button listener');
+        els.manualEntryBtn.addEventListener('click', () => {
+            console.log('Manual entry button clicked');
+            openManualEntry();
+        });
+    } else {
+        console.error('ERROR: els.manualEntryBtn is null or undefined');
+    }
 
     els.profileBtn.addEventListener('click', async () => {
         // Check token instead of userEmail (sub-accounts don't have email)
@@ -1972,21 +1980,58 @@ function fileToBase64(file) {
 
 function escapeHtml(text) { return text.replace(/'/g, "&apos;").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); }
 
-function openOverlay(el) { el.classList.add('visible'); }
+function openOverlay(el) {
+    if (!el) {
+        console.error('openOverlay called with null element');
+        return;
+    }
+    console.log('Opening overlay:', el.id || el.className);
+    el.classList.add('visible');
+}
+
 function closeOverlay(el) { el.classList.remove('visible'); if (el === els.resOverlay) { state.entryMode = 'scan'; } }
 
 function openManualEntry() {
-    els.resFields.name.value = "";
-    els.resFields.company.value = "";
-    els.resFields.role.value = "";
-    els.resFields.category.value = "";
-    els.resFields.email.value = "";
-    els.resFields.phone.value = "";
-    els.resFields.url.value = "";
-    els.resFields.address.value = "";
-    els.resFields.notes.value = "";
-    state.entryMode = "manual";
-    openOverlay(els.resOverlay);
+    console.log('=== openManualEntry called ===');
+    
+    try {
+        console.log('Checking required elements...');
+        
+        if (!els.resOverlay) {
+            console.error('els.resOverlay is null or undefined');
+            return;
+        }
+        console.log('els.resOverlay found:', els.resOverlay.id);
+        
+        if (!els.resFields) {
+            console.error('els.resFields is null or undefined');
+            return;
+        }
+        console.log('els.resFields found');
+        
+        console.log('Clearing form fields...');
+        els.resFields.name.value = "";
+        els.resFields.company.value = "";
+        els.resFields.role.value = "";
+        els.resFields.category.value = "";
+        els.resFields.email.value = "";
+        els.resFields.phone.value = "";
+        els.resFields.url.value = "";
+        els.resFields.address.value = "";
+        els.resFields.notes.value = "";
+        console.log('Form fields cleared');
+        
+        state.entryMode = "manual";
+        console.log('Entry mode set to manual:', state.entryMode);
+        
+        console.log('Calling openOverlay with resOverlay...');
+        openOverlay(els.resOverlay);
+        console.log('=== openManualEntry completed successfully ===');
+        
+    } catch (error) {
+        console.error('ERROR in openManualEntry:', error);
+        console.error('Error stack:', error.stack);
+    }
 }
 
 function showSpinner(t) { if (els.spinnerText) els.spinnerText.innerText = t; els.spinner.classList.remove('hidden'); }
