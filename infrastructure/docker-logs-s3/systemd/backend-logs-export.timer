@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer to export Docker backend logs to S3 every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+RandomizedDelaySec=10
+AccuracySec=1s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

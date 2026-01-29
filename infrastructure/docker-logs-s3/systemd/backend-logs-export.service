@@ -1,0 +1,15 @@
+[Unit]
+Description=Export Docker backend logs to S3
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/docker-logs-s3/scripts/export-backend-logs.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=backend-logs-export
+
+[Install]
+WantedBy=multi-user.target

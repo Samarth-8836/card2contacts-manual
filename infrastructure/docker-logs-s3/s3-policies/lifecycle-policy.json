@@ -1,0 +1,38 @@
+{
+  "Rules": [
+    {
+      "ID": "BackendLogsStandardIA15Days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "prod/backend/"
+      },
+      "Transitions": [
+        {
+          "Days": 15,
+          "StorageClass": "STANDARD_IA"
+        }
+      ],
+      "NoncurrentVersionTransitions": [],
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    },
+    {
+      "ID": "DatabaseLogsStandardIA15Days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "prod/db/"
+      },
+      "Transitions": [
+        {
+          "Days": 15,
+          "StorageClass": "STANDARD_IA"
+        }
+      ],
+      "NoncurrentVersionTransitions": [],
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    }
+  ]
+}
