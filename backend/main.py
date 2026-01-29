@@ -181,6 +181,30 @@ def on_shutdown():
     print("✅ Database engine disposed")
 
 
+@app.get("/health")
+async def health_check():
+    """Health check for Docker/Kubernetes and monitoring."""
+    try:
+        from backend.database import engine
+        from sqlalchemy import text
+
+        # Check database connectivity
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=503, content={"status": "unhealthy", "error": str(e)}
+        )
+
+
 # ==========================================
 # 2. DATA MODELS
 # ==========================================

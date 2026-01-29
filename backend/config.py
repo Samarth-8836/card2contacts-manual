@@ -41,10 +41,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://admin:securepassword@localhost:5432/scanner_prod"
 
     # Database Connection Pool Settings
-    DB_POOL_SIZE: int = 20
-    DB_MAX_OVERFLOW: int = 40
+    DB_POOL_SIZE: int = 50  # Increased from 20 for background task load
+    DB_MAX_OVERFLOW: int = 100  # Increased from 40 for concurrent operations
     DB_POOL_TIMEOUT: int = 30
-    DB_POOL_RECYCLE: int = 3600
+    DB_POOL_RECYCLE: int = 1800  # Reduced from 3600 to 30 minutes
 
     # ==========================================
     # AUTHENTICATION & SECURITY
