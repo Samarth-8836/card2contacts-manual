@@ -172,6 +172,15 @@ def on_startup():
     print(f"✅ OCR Service Initialized: {settings.OCR_PROVIDER}")
 
 
+@app.on_event("shutdown")
+def on_shutdown():
+    print("🛑 Shutting down - cleaning up resources...")
+    from backend.database import engine
+
+    engine.dispose()
+    print("✅ Database engine disposed")
+
+
 # ==========================================
 # 2. DATA MODELS
 # ==========================================
@@ -1491,7 +1500,7 @@ async def async_process_image_logic(image_bytes: bytes, raw_text: str = ""):
                 "custom_llm_provider": "groq",
             }
 
-        response = await acompletion(**api_params)
+        response = await asyncio.wait_for(acompletion(**api_params), timeout=30.0)
         print(f"[AI PROCESSING ASYNC] ✅ Received response from AI")
 
         content = response.choices[0].message.content
@@ -1605,7 +1614,11 @@ Business Card Text:
                 "custom_llm_provider": "groq",
             }
 
-        response = completion(**api_params)
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(completion, **api_params)
+            response = future.result(timeout=30.0)
         print(f"[AI PROCESSING SYNC] ✅ Received response from AI")
 
         content = response.choices[0].message.content
@@ -1752,55 +1765,56 @@ def replace_template_variables(text: str, contact_data: dict) -> str:
     return result
 
 
-async def process_and_send_email(
-    user_email: str, contact_data: dict, db_session: Session
-):
+async def process_and_send_email(user_email: str, contact_data: dict):
     """
     Process and send email using programmatic variable replacement.
     Variables in the template are replaced with actual contact data.
     """
-    statement = select(User).where(User.email == user_email)
-    user = db_session.exec(statement).first()
-    if not user or not user.email_feature_enabled:
-        return
-    emails = normalize_emails(contact_data.get("email", []))
-    if not emails:
-        return
+    from backend.database import Session, engine
 
-    try:
-        templates = fetch_templates(user, db_session)
-        active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
-        if not active_tpl:
+    with Session(engine) as db_session:
+        statement = select(User).where(User.email == user_email)
+        user = db_session.exec(statement).first()
+        if not user or not user.email_feature_enabled:
+            return
+        emails = normalize_emails(contact_data.get("email", []))
+        if not emails:
             return
 
-        # Programmatically replace variables in subject and body
-        subject = replace_template_variables(active_tpl["subject"], contact_data)
-        body = replace_template_variables(active_tpl["body"], contact_data)
+        try:
+            templates = fetch_templates(user, db_session)
+            active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
+            if not active_tpl:
+                return
 
-        # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace("\n", "<br>")
+            # Programmatically replace variables in subject and body
+            subject = replace_template_variables(active_tpl["subject"], contact_data)
+            body = replace_template_variables(active_tpl["body"], contact_data)
 
-        # Parse and resolve attachments if present
-        attachments = None
-        if active_tpl.get("attachment"):
-            try:
-                attachment_refs = json.loads(active_tpl["attachment"])
-                attachments = get_template_attachments(
-                    user, db_session, attachment_refs
-                )
-            except:
-                pass
+            # Convert newlines to HTML line breaks for proper email formatting
+            body_html = body.replace("\n", "<br>")
 
-        # Send emails
-        for email_addr in emails:
-            try:
-                send_gmail(
-                    user, db_session, email_addr, subject, body_html, attachments
-                )
-            except:
-                pass
-    except:
-        pass
+            # Parse and resolve attachments if present
+            attachments = None
+            if active_tpl.get("attachment"):
+                try:
+                    attachment_refs = json.loads(active_tpl["attachment"])
+                    attachments = get_template_attachments(
+                        user, db_session, attachment_refs
+                    )
+                except:
+                    pass
+
+            # Send emails
+            for email_addr in emails:
+                try:
+                    send_gmail(
+                        user, db_session, email_addr, subject, body_html, attachments
+                    )
+                except:
+                    pass
+        except:
+            pass
 
 
 def sync_email_generation_and_send(user: User, db: Session, contact_data: dict):
@@ -1842,156 +1856,166 @@ def sync_email_generation_and_send(user: User, db: Session, contact_data: dict):
         pass
 
 
-async def process_and_send_email_admin(
-    admin_username: str, contact_data: dict, db_session: Session
-):
+async def process_and_send_email_admin(admin_username: str, contact_data: dict):
     """
     Send email for enterprise admin using their active template.
     Uses programmatic variable replacement.
     """
-    statement = select(EnterpriseAdmin).where(
-        EnterpriseAdmin.username == admin_username
-    )
-    admin = db_session.exec(statement).first()
-    if not admin or not admin.email_feature_enabled:
-        return
+    from backend.database import Session, engine
 
-    emails = normalize_emails(contact_data.get("email", []))
-    if not emails:
-        return
+    with Session(engine) as db_session:
+        statement = select(EnterpriseAdmin).where(
+            EnterpriseAdmin.username == admin_username
+        )
+        admin = db_session.exec(statement).first()
 
-    try:
-        templates = fetch_templates(admin, db_session)
-        active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
-        if not active_tpl:
+        if not admin or not admin.email_feature_enabled:
             return
 
-        # Programmatically replace variables
-        subject = replace_template_variables(active_tpl["subject"], contact_data)
-        body = replace_template_variables(active_tpl["body"], contact_data)
+        emails = normalize_emails(contact_data.get("email", []))
+        if not emails:
+            return
 
-        # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace("\n", "<br>")
+        try:
+            templates = fetch_templates(admin, db_session)
+            active_tpl = next((t for t in templates if t["active"] == "TRUE"), None)
+            if not active_tpl:
+                return
 
-        # Parse and resolve attachments if present
-        attachment = None
-        if active_tpl.get("attachment"):
-            try:
-                attachment_refs = json.loads(active_tpl["attachment"])
-                attachment = get_template_attachments(
-                    admin, db_session, attachment_refs
-                )
-            except:
-                pass
+            # Programmatically replace variables
+            subject = replace_template_variables(active_tpl["subject"], contact_data)
+            body = replace_template_variables(active_tpl["body"], contact_data)
 
-        # Send emails
-        for email_addr in emails:
-            try:
-                send_gmail(
-                    admin, db_session, email_addr, subject, body_html, attachment
-                )
-            except:
-                pass
-    except:
-        pass
+            # Convert newlines to HTML line breaks for proper email formatting
+            body_html = body.replace("\n", "<br>")
+
+            # Parse and resolve attachments if present
+            attachments = None
+            if active_tpl.get("attachment"):
+                try:
+                    attachment_refs = json.loads(active_tpl["attachment"])
+                    attachments = get_template_attachments(
+                        admin, db_session, attachment_refs
+                    )
+                except:
+                    pass
+
+            # Send emails
+            for email_addr in emails:
+                try:
+                    send_gmail(
+                        admin, db_session, email_addr, subject, body_html, attachments
+                    )
+                except:
+                    pass
+        except:
+            pass
 
 
 async def process_and_send_email_enterprise(
-    admin: EnterpriseAdmin, contact_data: dict, template: dict, db_session: Session
+    admin: EnterpriseAdmin, contact_data: dict, template: dict
 ):
     """
     Send email for enterprise sub-account using admin's Gmail and assigned template.
     Uses programmatic variable replacement.
     """
-    emails = normalize_emails(contact_data.get("email", []))
-    if not emails:
-        return
+    from backend.database import Session, engine
 
-    try:
-        # Programmatically replace variables
-        subject = replace_template_variables(template["subject"], contact_data)
-        body = replace_template_variables(template["body"], contact_data)
+    with Session(engine) as db_session:
+        emails = normalize_emails(contact_data.get("email", []))
+        if not emails:
+            return
 
-        # Convert newlines to HTML line breaks for proper email formatting
-        body_html = body.replace("\n", "<br>")
+        try:
+            # Programmatically replace variables
+            subject = replace_template_variables(template["subject"], contact_data)
+            body = replace_template_variables(template["body"], contact_data)
 
-        # Parse and resolve attachments if present
-        attachments = None
-        if template.get("attachment"):
-            try:
-                attachment_refs = json.loads(template["attachment"])
-                attachments = get_template_attachments(
-                    admin, db_session, attachment_refs
-                )
-            except:
-                pass
+            # Convert newlines to HTML line breaks for proper email formatting
+            body_html = body.replace("\n", "<br>")
 
-        # Send emails
-        for email_addr in emails:
-            try:
-                send_gmail(
-                    admin, db_session, email_addr, subject, body_html, attachments
-                )
-            except:
-                pass
-    except:
-        pass
+            # Parse and resolve attachments if present
+            attachments = None
+            if template.get("attachment"):
+                try:
+                    attachment_refs = json.loads(template["attachment"])
+                    attachments = get_template_attachments(
+                        admin, db_session, attachment_refs
+                    )
+                except:
+                    pass
+
+            # Send emails
+            for email_addr in emails:
+                try:
+                    send_gmail(
+                        admin, db_session, email_addr, subject, body_html, attachments
+                    )
+                except:
+                    pass
+        except:
+            pass
 
 
-def background_bulk_worker(user_identifier: str, db_session: Session):
+def background_bulk_worker(user_identifier: str):
     """Background worker for single users and enterprise admins."""
-    # Try to find user by email (single user)
-    statement = select(User).where(User.email == user_identifier)
-    user = db_session.exec(statement).first()
+    from backend.database import Session, engine
 
-    # If not found, try enterprise admin by email
-    if not user:
-        statement = select(EnterpriseAdmin).where(
-            EnterpriseAdmin.email == user_identifier
-        )
+    with Session(engine) as db_session:
+        # Try to find user by email (single user)
+        statement = select(User).where(User.email == user_identifier)
         user = db_session.exec(statement).first()
 
-    if not user:
-        return
-    process_bulk_queue_sync(
-        user,
-        db_session,
-        process_func=sync_process_image_logic,
-        email_func=sync_email_generation_and_send,
-    )
+        # If not found, try enterprise admin by email
+        if not user:
+            statement = select(EnterpriseAdmin).where(
+                EnterpriseAdmin.email == user_identifier
+            )
+            user = db_session.exec(statement).first()
 
-
-def background_bulk_worker_sub_account(
-    admin_id: int, sub_account_id: int, db_session: Session
-):
-    """Background worker for sub-accounts."""
-    admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.id == admin_id)
-    admin = db_session.exec(admin_stmt).first()
-
-    sub_stmt = select(SubAccount).where(SubAccount.id == sub_account_id)
-    sub_account = db_session.exec(sub_stmt).first()
-
-    if not admin or not sub_account:
-        return
-
-    # Import the sub-account bulk processor
-    from backend.google_utils import process_bulk_queue_sync_sub_account
-
-    # Get the assigned template for this sub-account
-    template = None
-    if sub_account.assigned_template_id:
-        templates = fetch_templates(admin, db_session)
-        template = next(
-            (t for t in templates if t["id"] == sub_account.assigned_template_id), None
+        if not user:
+            return
+        process_bulk_queue_sync(
+            user,
+            db_session,
+            process_func=sync_process_image_logic,
+            email_func=sync_email_generation_and_send,
         )
 
-    process_bulk_queue_sync_sub_account(
-        admin,
-        sub_account,
-        db_session,
-        process_func=sync_process_image_logic,
-        template=template,
-    )
+
+def background_bulk_worker_sub_account(admin_id: int, sub_account_id: int):
+    """Background worker for sub-accounts."""
+    from backend.database import Session, engine
+
+    with Session(engine) as db_session:
+        admin_stmt = select(EnterpriseAdmin).where(EnterpriseAdmin.id == admin_id)
+        admin = db_session.exec(admin_stmt).first()
+
+        sub_stmt = select(SubAccount).where(SubAccount.id == sub_account_id)
+        sub_account = db_session.exec(sub_stmt).first()
+
+        if not admin or not sub_account:
+            return
+
+        # Import the sub-account bulk processor
+        from backend.google_utils import process_bulk_queue_sync_sub_account
+
+        # Get the assigned template for this sub-account
+        template = None
+        if sub_account.assigned_template_id:
+            templates = fetch_templates(admin, db_session)
+            template = next(
+                (t for t in templates if t["id"] == sub_account.assigned_template_id),
+                None,
+            )
+
+        process_bulk_queue_sync_sub_account(
+            admin,
+            sub_account,
+            db_session,
+            process_func=sync_process_image_logic,
+            template=template,
+        )
 
 
 # ==========================================
@@ -2001,6 +2025,7 @@ def background_bulk_worker_sub_account(
 
 @app.post("/api/scan")
 async def scan_card(
+    request: Request,
     file: UploadFile = File(...),
     token: str = None,
     bulk_stage: bool = False,
@@ -2008,6 +2033,15 @@ async def scan_card(
 ):
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
+
+    # Validate file size
+    MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413, detail="File too large. Maximum 10MB allowed."
+        )
+
     user, user_type = get_current_user_multi(token, db)
     file_bytes = await file.read()
 
@@ -2081,13 +2115,17 @@ async def scan_card(
     # Extract OCR text using abstraction layer
     print(f"[SCAN ENDPOINT] Step 1: Calling OCR service...")
     ocr_service = get_ocr_service()
-    ocr_result = await ocr_service.extract_async(file_bytes, file.filename)
+    ocr_result = await asyncio.wait_for(
+        ocr_service.extract_async(file_bytes, file.filename), timeout=60.0
+    )
     raw_text = ocr_result.full_text
     print(f"[SCAN ENDPOINT] Step 1 Complete: OCR extracted {len(raw_text)} characters")
     print(f"[SCAN ENDPOINT] OCR text: {raw_text[:300]}...")
 
     print(f"[SCAN ENDPOINT] Step 2: Calling AI processing...")
-    structured_data = await async_process_image_logic(file_bytes, raw_text)
+    structured_data = await asyncio.wait_for(
+        async_process_image_logic(file_bytes, raw_text), timeout=30.0
+    )
     print(
         f"[SCAN ENDPOINT] Step 2 Complete: AI returned data with keys: {list(structured_data.keys())}"
     )
@@ -2113,13 +2151,13 @@ def submit_bulk(
             count = submit_bulk_session_sub_account(admin, user, db)
             if count > 0:
                 background_tasks.add_task(
-                    background_bulk_worker_sub_account, admin.id, user.id, db
+                    background_bulk_worker_sub_account, admin.id, user.id
                 )
         else:
             count = submit_bulk_session(admin, db)
             if count > 0:
                 identifier = getattr(admin, "email", None) or getattr(admin, "username")
-                background_tasks.add_task(background_bulk_worker, identifier, db)
+                background_tasks.add_task(background_bulk_worker, identifier)
 
         return {"status": "submitted", "count": count}
     except HTTPException as e:
@@ -2223,7 +2261,6 @@ def save_contact_to_google(
                         admin,
                         contact.dict(),
                         assigned_template,
-                        db,
                     )
                     return {
                         "status": "success",
@@ -2242,7 +2279,7 @@ def save_contact_to_google(
             # For admin's own scanning, use the currently active template
             if user.email_feature_enabled and contact.email:
                 background_tasks.add_task(
-                    process_and_send_email_admin, user.username, contact.dict(), db
+                    process_and_send_email_admin, user.username, contact.dict()
                 )
                 return {
                     "status": "success",
@@ -2262,7 +2299,7 @@ def save_contact_to_google(
 
             if user.email_feature_enabled and contact.email:
                 background_tasks.add_task(
-                    process_and_send_email, user.email, contact.dict(), db
+                    process_and_send_email, user.email, contact.dict()
                 )
                 return {
                     "status": "success",

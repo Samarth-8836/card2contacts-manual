@@ -886,7 +886,7 @@ def clear_staging_data(user: User, db: Session):
 
 
 def process_bulk_queue_sync(
-    user: User,
+    user: Union[User, EnterpriseAdmin],
     db: Session,
     process_func: Callable[[bytes], dict],
     email_func: Optional[Callable[[User, Session, dict], None]] = None,
@@ -899,7 +899,10 @@ def process_bulk_queue_sync(
     sheets_service = build("sheets", "v4", credentials=creds)
     drive_service = build("drive", "v3", credentials=creds)
 
-    while True:
+    MAX_ITERATIONS = 1000  # Safety limit to prevent infinite loops
+    iteration = 0
+
+    while iteration < MAX_ITERATIONS:
         try:
             res = (
                 sheets_service.spreadsheets()
@@ -917,6 +920,7 @@ def process_bulk_queue_sync(
 
             file_id = rows[0][0]
             print(f"Processing Bulk File ID: {file_id}")
+            iteration += 1
 
             try:
                 request = drive_service.files().get_media(fileId=file_id)
@@ -998,7 +1002,10 @@ def process_bulk_queue_sync_sub_account(
 
     staging_sheet, queue_sheet = get_sub_account_bulk_sheet_names(sub_account)
 
-    while True:
+    MAX_ITERATIONS = 1000  # Safety limit to prevent infinite loops
+    iteration = 0
+
+    while iteration < MAX_ITERATIONS:
         try:
             res = (
                 sheets_service.spreadsheets()
@@ -1016,6 +1023,7 @@ def process_bulk_queue_sync_sub_account(
 
             file_id = rows[0][0]
             print(f"Processing Bulk File ID: {file_id}")
+            iteration += 1
 
             try:
                 request = drive_service.files().get_media(fileId=file_id)
@@ -1075,11 +1083,16 @@ def process_bulk_queue_sync_sub_account(
                     emails = normalize_emails(contact_data.get("email", []))
                     if emails:
                         prompt = generate_email_prompt(template, contact_data)
-                        response = completion(
-                            model="gemini/gemini-flash-lite-latest",
-                            messages=[{"role": "user", "content": prompt}],
-                            response_format={"type": "json_object"},
-                        )
+                        from concurrent.futures import ThreadPoolExecutor
+
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(
+                                completion,
+                                model="gemini/gemini-flash-lite-latest",
+                                messages=[{"role": "user", "content": prompt}],
+                                response_format={"type": "json_object"},
+                            )
+                            response = future.result(timeout=30.0)
                         content = json.loads(
                             response.choices[0]
                             .message.content.replace("```json", "")
