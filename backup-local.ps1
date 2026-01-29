@@ -3,7 +3,7 @@
 # Runs via Windows Task Scheduler at 2:00 AM IST
 
 # ===== CONFIGURATION =====
-$RemoteServer = "ubuntu@13.201.95.108"
+$RemoteServer = "ubuntu@65.0.91.108"
 $SSHKeyPath = "D:\SECURE-DO-NOT-DELETE\Card2Contacts-app-server-access\card2contacts - app server.pem"
 $RemoteProjectDir = "/opt/digicard"
 $RemoteBackupDir = "/opt/digicard/backups"

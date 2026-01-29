@@ -21,4 +21,4 @@ COPY backend /app/backend
 EXPOSE 8000
 
 # Run the application with proper module path
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--limit-concurrency", "1000", "--max-requests", "10000", "--max-requests-jitter", "1000", "--timeout-keep-alive", "5", "--timeout-graceful-shutdown", "30"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--limit-concurrency", "1000", "--limit-max-requests", "10000", "--limit-max-requests-jitter", "1000", "--timeout-keep-alive", "5", "--timeout-graceful-shutdown", "30"]
