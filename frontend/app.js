@@ -99,6 +99,7 @@ const state = {
     googleMissingScopes: [],  // Array of missing scope names
 
     // Logic State
+    entryMode: 'scan',  // 'scan' | 'manual'
     bulkCountServer: 0, // Count confirmed by server
     uploadingCount: 0,  // Count currently in network flight (Optimistic UI)
     tempFront: null,    // Blob for front image (Dual Mode)
@@ -140,6 +141,7 @@ const els = {
     shutterBtn: document.getElementById('shutter-btn'),
     counterBadge: document.getElementById('counter-badge'),
     resetBtn: document.getElementById('btn-reset-scan'),
+    manualEntryBtn: document.getElementById('manual-entry-btn'),
 
     profileBtn: document.getElementById('profile-btn'),
 
@@ -518,6 +520,8 @@ function setupEventListeners() {
     });
 
     // --- AUTH & OVERLAYS ---
+    els.manualEntryBtn.addEventListener('click', openManualEntry);
+
     els.profileBtn.addEventListener('click', async () => {
         // Check token instead of userEmail (sub-accounts don't have email)
         if (state.token) {
@@ -1621,6 +1625,7 @@ function populateResult(data) {
     if (!els.resFields.name.value && data.raw_text) {
         els.resFields.notes.value = "RAW TEXT:\n" + data.raw_text;
     }
+    state.entryMode = 'scan';
 }
 
 async function generateVCF() {
@@ -1634,7 +1639,8 @@ async function generateVCF() {
         tel: split(f.phone), email: split(f.email), url: split(f.url),
         adr: split(f.address),
         cat: splitComma(f.category), // New Field
-        notes: f.notes.value.trim()
+        notes: f.notes.value.trim(),
+        import_source: state.entryMode === 'manual' ? 'Manual Entry' : 'General'
     };
 
     if (state.token && state.isGoogleConnected) {
@@ -1967,7 +1973,22 @@ function fileToBase64(file) {
 function escapeHtml(text) { return text.replace(/'/g, "&apos;").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); }
 
 function openOverlay(el) { el.classList.add('visible'); }
-function closeOverlay(el) { el.classList.remove('visible'); }
+function closeOverlay(el) { el.classList.remove('visible'); if (el === els.resOverlay) { state.entryMode = 'scan'; } }
+
+function openManualEntry() {
+    els.resFields.name.value = "";
+    els.resFields.company.value = "";
+    els.resFields.role.value = "";
+    els.resFields.category.value = "";
+    els.resFields.email.value = "";
+    els.resFields.phone.value = "";
+    els.resFields.url.value = "";
+    els.resFields.address.value = "";
+    els.resFields.notes.value = "";
+    state.entryMode = "manual";
+    openOverlay(els.resOverlay);
+}
+
 function showSpinner(t) { if (els.spinnerText) els.spinnerText.innerText = t; els.spinner.classList.remove('hidden'); }
 function hideSpinner() { els.spinner.classList.add('hidden'); }
 
